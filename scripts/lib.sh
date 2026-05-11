@@ -71,13 +71,52 @@ chris_manual_todo() {
   printf '%s\n' "$msg" >>"$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE"
 }
 
+# Print queued manual steps. When interactive (TTY bootstrap, not dry-run), walks the user
+# through each line and waits for Enter on /dev/tty before the next (done or skipped for now).
+# Opt out: CHRIS_DEVSTRAP_SKIP_MANUAL_GUIDE=1 (prints the same list as before, no pauses).
 chris_print_manual_todos() {
   [[ -n "${CHRIS_DEVSTRAP_MANUAL_TODOS_FILE:-}" && -s "$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE" ]] || return 0
-  hr
-  step_start "Manual follow-ups (todo)"
+
+  local tmp="$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE"
+  local use_guide=1
+  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]] ||
+    [[ "${CHRIS_DEVSTRAP_INTERACTIVE:-0}" != 1 ]] ||
+    [[ "${CHRIS_DEVSTRAP_SKIP_MANUAL_GUIDE:-0}" == 1 ]] ||
+    [[ ! -r /dev/tty ]]; then
+    use_guide=0
+  fi
+
+  local -a items=()
   while IFS= read -r line || [[ -n "${line:-}" ]]; do
     [[ -z "${line// }" ]] && continue
-    step_info "Next: $line"
-  done <"$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE"
-  rm -f "$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE"
+    items+=("$line")
+  done <"$tmp"
+  rm -f "$tmp"
+
+  local n="${#items[@]}"
+  [[ "$n" -eq 0 ]] && return 0
+
+  if [[ "$use_guide" != 1 ]]; then
+    hr
+    step_start "Manual follow-ups (todo)"
+    local line
+    for line in "${items[@]}"; do
+      step_info "Next: $line"
+    done
+    return 0
+  fi
+
+  hr
+  step_start "Manual follow-ups — guided checklist (${n} step(s))"
+  step_info "Press Enter after each step when you are done, or to skip it for now."
+  local i
+  for ((i = 0; i < n; i++)); do
+    hr
+    printf '%sStep %s of %s%s\n' "$UI_CYAN" "$((i + 1))" "$n" "$UI_RESET"
+    printf '%s\n\n' "${items[$i]}"
+    printf '%sPress Enter to continue…%s\n' "$UI_DIM" "$UI_RESET"
+    read -r _ </dev/tty || true
+  done
+  hr
+  step_ok "Manual follow-ups acknowledged (${n} step(s))."
 }

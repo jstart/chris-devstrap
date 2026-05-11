@@ -17,6 +17,10 @@ Usage: $0 [--dry-run] [--verbose] [--help] [subcommand]
               applying. Skips brew bundle install and GitHub SSH setup.
   --verbose   Trace shell commands (set -x) during this bootstrap run.
 
+Environment:
+  CHRIS_DEVSTRAP_SKIP_MANUAL_GUIDE=1   At the end, print manual follow-ups as a list only
+              (no Enter-to-continue prompts). CI / non-TTY runs behave this way automatically.
+
 Subcommands:
   (none)       Full bootstrap (safe to re-run; see README).
   rerun        Same as no subcommand — full bootstrap again.
