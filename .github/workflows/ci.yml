@@ -1,6 +1,7 @@
 name: chris-devstrap bash syntax
 
 on:
+  workflow_dispatch:
   push:
     branches: [main, master]
   pull_request:

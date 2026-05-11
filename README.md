@@ -26,6 +26,19 @@ chmod +x bootstrap.sh scripts/*.sh
 ./bootstrap.sh
 ```
 
+### First-time publish to GitHub (maintainer)
+
+The **`curl`** URL above only works after this repo exists on GitHub with **`main`** containing `install.sh`. From this directory, with [GitHub CLI](https://cli.github.com/) authenticated:
+
+```bash
+gh auth login
+gh repo create jstart/chris-devstrap --public \
+  --description "One-shot macOS bootstrap: Homebrew, Zsh, defaults, Dock, Raycast prep, SSH" \
+  --source=. --remote=origin --push
+```
+
+If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin main`** instead. Then confirm Actions: **https://github.com/jstart/chris-devstrap/actions**.
+
 **Do not run the whole repo as root.** `defaults`, Dock, `~/.zprofile`, `~/.ssh`, and `git config --global` are per-user. After `brew.sh` puts Homebrew on `PATH`, bootstrap runs `sudo -v` once and keeps the ticket alive in the background so a long `brew bundle` (or other steps that need `sudo`) does not hit an expired credential mid-run. Set `CHRIS_DEVSTRAP_SKIP_SUDO_PRIME=1` to skip that.
 
 ## Commands
