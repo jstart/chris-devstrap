@@ -82,9 +82,10 @@ chris_run defaults write com.apple.screencapture disable-shadow -bool true || tr
 chris_run defaults write com.apple.screencapture location -string "$SCREENSHOT_DIR" || true
 chris_run defaults write com.apple.iphonesimulator ScreenShotSaveLocation -string "$SCREENSHOT_DIR" || true
 
-if [[ "${CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS:-}" == "1" ]]; then
-  step_start "UI sound effects (optional — includes screenshot shutter)"
-  step_info "CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=1 disables all macOS UI sound effects (Apple does not offer screenshot-only)."
+# Default: silence UI sounds unless CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=0
+if [[ "${CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS:-1}" != "0" ]]; then
+  step_start "UI sound effects (default off — includes screenshot shutter)"
+  step_info "Unset or non-zero disables UI sounds (set CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=0 to keep system UI sounds). Apple has no screenshot-only toggle."
   chris_run defaults write com.apple.systemsound "com.apple.sound.uiaudio.enabled" -int 0 || true
   # Some macOS builds map the Sound → Sound Effects toggle to NSGlobalDomain; mirror so ⌘⇧3/4 respects the same intent.
   chris_run defaults write -g com.apple.sound.uiaudio.enabled -int 0 || true

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copy repo headshot to ~/Downloads and set the macOS local user login picture (dscl).
-# Requires assets/headshot.png in the repo. Apple ID / Chrome / etc. avatars are manual (see assets/README.md).
+# Requires assets/headshot.png in the repo (see assets/README.md).
 set -euo pipefail
 
 # shellcheck source=lib.sh
@@ -71,9 +71,5 @@ fi
 
 chris_run killall SystemUIServer || true
 chris_run killall Finder || true
-
-chris_manual_todo "Apple ID / iCloud avatar: appleid.apple.com or System Settings → Apple ID → your picture (no supported repo automation)."
-chris_manual_todo "Google Chrome profile photo: Chrome → Settings → You and Google."
-chris_manual_todo "Messages / other apps: set profile images inside each app if you want them to match."
 
 exit 0

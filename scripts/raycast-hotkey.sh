@@ -32,10 +32,4 @@ else
   killall SystemUIServer cfprefsd 2>/dev/null || true
 fi
 
-chris_manual_todo "Raycast → Settings → General → Hotkey → Command+Space."
-chris_manual_todo "Raycast → Settings → AI → turn off the global switch (top right) to disable Raycast AI (no supported defaults key; use the app UI)."
-chris_manual_todo "Raycast → Settings → Extensions: uncheck \"Enabled\" for extensions, groups, or commands you do not want (no supported CLI)."
-chris_manual_todo "Screenshot shutter sound: System Settings → Sound → Sound Effects → turn off \"Play sound effects…\" (all UI sounds). Or run bootstrap with CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=1 to set the same via defaults."
-chris_manual_todo "Raycast → Extensions → Window Management: Left Half ⌘⌃←, Right Half ⌘⌃→, Maximize ⌘⌃Space (names may vary)."
-chris_manual_todo "Raycast → Extensions → Clipboard History: hotkey ⌘⇧C."
-chris_manual_todo "System Settings → Privacy & Security: allow Raycast Accessibility (and Screen Recording if asked) for window commands."
+chris_manual_todo "Raycast — General → Hotkey → ⌘Space · AI → off (global switch) · Extensions → disable rows you do not need · Window Management: Left ⌘⌃← / Right ⌘⌃→ / Maximize ⌘⌃Space · Clipboard History ⌘⇧C · System Settings → Privacy & Security → Accessibility (+ Screen Recording if asked). (UI sounds: bootstrap defaults silence them unless CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=0.)"

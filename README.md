@@ -67,7 +67,9 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | `CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1` | Skip `Brewfile.dev` for this run (otherwise installed when that file exists). |
 | `CHRIS_DEVSTRAP_CLEANUP=1` | With `./bootstrap.sh update`, run `brew cleanup` after bundle. |
 | `CHRIS_DEVSTRAP_SKIP_SUDO_PRIME=1` | Skip sudo prime/keepalive before bundle/defaults. |
-| `CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=1` | During `macos-defaults.sh`, disable **all** macOS UI sound effects (`com.apple.systemsound` + `-g` / NSGlobalDomain `com.apple.sound.uiaudio.enabled` — same scope as **System Settings → Sound → Sound Effects**; includes the screenshot “camera” sound; Apple has no screenshot-only toggle). |
+| `CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS` | **Default on:** unset or non-`0` disables **all** macOS UI sound effects during `macos-defaults.sh` (same scope as **System Settings → Sound → Sound Effects**; includes screenshot shutter). Set to **`0`** to leave UI sounds enabled. Apple has no screenshot-only toggle. |
+| `CHRIS_DEVSTRAP_SKIP_SBEDIT_INSTALL=1` | Skip downloading/installing the **sbedit** `.pkg` in `finder-sidebar.sh` (sidebar CLI has no Homebrew formula). |
+| `CHRIS_DEVSTRAP_SBEDIT_PKG_URL` | Override URL for the **sbedit** installer pkg (default: sidebar-editor **1.0** release asset on GitHub). |
 | `CHRIS_DEVSTRAP_SKIP_DEFAULT_BROWSER=1` | Skip the default-browser step in `macos-defaults.sh`. |
 | `CHRIS_DEVSTRAP_SKIP_HEADSHOT=1` | Skip `scripts/headshot.sh` (no `Downloads` copy / no `dscl` user picture). |
 | `CHRIS_DEVSTRAP_DEFAULT_BROWSER` | First argument to `defaultbrowser` when Chrome is installed (default `chrome`). |
@@ -94,10 +96,10 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | Bundle | `Brewfile` (+ `Brewfile.dev` when present unless `CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1`); for **`mas install`**, sign into the Mac App Store in the UI first (see **Mac App Store** above). |
 | Zsh / Oh My Zsh + snippet | `scripts/zsh.sh`, `templates/zshrc.snippet`, `templates/zsh-aliases.snippet` (git/shell shortcuts appended if missing) |
 | Global Git defaults (no user.name) | `scripts/git-config.sh` |
-| Finder (new window **Downloads**, column view, **date-modified** sort defaults + PlistBuddy best effort); Desktop & Dock window prefs; trackpad (**tap to click** + firm press / Force Click off); screenshots; **Control Center → Sound → Always Show** in menu bar (`ByHost` plist `Sound` = `18`); default browser (`defaultbrowser` when installed); hot corners; hide desktop widgets; global **`NSNavLastRootDirectory`** hint for some open/save sheets | `scripts/macos-defaults.sh` |
-| Headshot → **`~/Downloads/headshot.png`** + macOS **local user** login picture (`dscl`, needs **`assets/headshot.png`** in the repo) | `scripts/headshot.sh` (see [`assets/README.md`](assets/README.md); Apple ID / Chrome / Messages avatars stay manual) |
+| Finder (new window **Downloads**, column view, **date-modified** sort defaults + PlistBuddy best effort); Desktop & Dock window prefs; trackpad (**tap to click** + firm press / Force Click off); screenshots; **Control Center → Sound → Always Show** in menu bar (`ByHost` plist `Sound` = `18`); default browser (`defaultbrowser` when installed); hot corners; hide desktop widgets; global **`NSNavLastRootDirectory`** hint for some open/save sheets | `scripts/macos-defaults.sh` (UI sounds **off** by default unless `CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=0`) |
+| Headshot → **`~/Downloads/headshot.png`** + macOS **local user** login picture (`dscl`, needs **`assets/headshot.png`** in the repo) | `scripts/headshot.sh` (see [`assets/README.md`](assets/README.md)) |
 | Xcode first launch + iOS Simulator download | `scripts/xcode-components.sh` (skipped without full Xcode / on dry-run; errors are warnings) |
-| `~/Developer` layout + sidebar | `scripts/finder-sidebar.sh` |
+| `~/Developer` layout + sidebar | `scripts/finder-sidebar.sh` — downloads official **sbedit** `.pkg` when missing (`sudo installer`), then pins **Developer** + **Downloads** |
 | Dock | `scripts/dock.sh` — `defaults` for autohide + **tilesize / largesize 128**; `dockutil --remove all`, `config/dock-remove.txt`, `config/dock-add.tsv`; **`~/Downloads`** fan (**others**, date modified); `killall Dock` |
 | Raycast / Spotlight | `scripts/raycast-hotkey.sh` |
 | GitHub SSH + `origin` | `scripts/git-ssh-setup.sh` (end of bootstrap when criteria match) |
@@ -118,7 +120,7 @@ Open Chrome → profile menu → Add / Sign in → complete sign-in for that acc
 
 - **Cursor** — Sign in with Google.
 - **iTerm2** — **Settings (⌘,)** → **Profiles** → your profile → **Keys** → **Key Bindings** → **Presets…** → **Natural Text Editing** (repeat per profile if you use more than one).
-- **Raycast** — Root hotkey **⌘Space** (after bootstrap frees Spotlight where possible). **Disable AI:** **Settings → AI** (global switch). **Extensions:** **Settings → Extensions** → **Enabled** column per row (Raycast has no stable CLI for this). **Screenshot sound** is macOS UI sound (see **`CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS`** or **System Settings → Sound → Sound Effects**). Window Management / Clipboard / checklist lines come from `scripts/raycast-hotkey.sh`.
+- **Raycast** — End-of-bootstrap checklist groups hotkey, AI, extensions, window management, clipboard, and permissions in one step (`scripts/raycast-hotkey.sh`). Root hotkey **⌘Space** needs Spotlight freed first where possible. **Screenshot/UI sounds:** silenced by default via **`CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS`** (`0` to keep sounds).
 - **Xcode** — Install from App Store or `mas`; `sudo xcodebuild -license accept` when prompted. Simulator runtimes and predictive completion: use **Xcode → Settings → Components / Text Editing** (Apple has no stable headless flow for all optional downloads).
 
 ### Microphone, camera, screen recording
