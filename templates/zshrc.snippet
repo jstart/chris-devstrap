@@ -1,0 +1,43 @@
+# chris-devstrap begin
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="robbyrussell"
+plugins=(git history-substring-search)
+[[ -r "$ZSH/oh-my-zsh.sh" ]] && source "$ZSH/oh-my-zsh.sh"
+
+# fzf + zsh-autosuggestions (Homebrew; see README)
+if [[ -r /opt/homebrew/opt/fzf/shell/completion.zsh ]]; then
+  source /opt/homebrew/opt/fzf/shell/completion.zsh
+  source /opt/homebrew/opt/fzf/shell/key-bindings.zsh
+elif [[ -r /usr/local/opt/fzf/shell/completion.zsh ]]; then
+  source /usr/local/opt/fzf/shell/completion.zsh
+  source /usr/local/opt/fzf/shell/key-bindings.zsh
+fi
+for _chris_as in /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh; do
+  [[ -r "$_chris_as" ]] && source "$_chris_as" && break
+done
+unset _chris_as
+
+# --- chris-devstrap: shell aliases (begin) ---
+mkcd() {
+  command mkdir -p "$1" && cd "$1" || return
+}
+alias gs='git status'
+alias gd='git diff'
+alias GD='git branch -D'
+alias GR='git reset --hard'
+alias GPD='git push origin :'
+alias gpo='git pull origin'
+alias gc='git checkout'
+alias gb='git branch'
+alias gp='git pull'
+alias ga='git add .'
+alias gca='git commit -a'
+alias GP='git push'
+alias GC='git checkout -b'
+unalias gitclean 2>/dev/null
+gitclean() {
+  git fetch --prune
+  git branch -r | awk '{print $1}' | egrep -v -f /dev/fd/0 <(git branch -vv | grep origin) | awk '{print $1}' | xargs git branch -D
+}
+# --- chris-devstrap: shell aliases (end) ---
+# chris-devstrap end

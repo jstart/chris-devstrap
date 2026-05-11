@@ -1,0 +1,27 @@
+# --- chris-devstrap: shell aliases (begin) ---
+# Git / directory shortcuts (legacy chrisdev-style; safe to edit or remove)
+
+mkcd() {
+  command mkdir -p "$1" && cd "$1" || return
+}
+
+alias gs='git status'
+alias gd='git diff'
+alias GD='git branch -D'
+alias GR='git reset --hard'
+alias GPD='git push origin :'
+alias gpo='git pull origin'
+alias gc='git checkout'
+alias gb='git branch'
+alias gp='git pull'
+alias ga='git add .'
+alias gca='git commit -a'
+alias GP='git push'
+alias GC='git checkout -b'
+
+unalias gitclean 2>/dev/null
+gitclean() {
+  git fetch --prune
+  git branch -r | awk '{print $1}' | egrep -v -f /dev/fd/0 <(git branch -vv | grep origin) | awk '{print $1}' | xargs git branch -D
+}
+# --- chris-devstrap: shell aliases (end) ---

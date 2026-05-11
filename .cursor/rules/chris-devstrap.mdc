@@ -1,0 +1,24 @@
+---
+description: chris-devstrap bash conventions and bootstrap touchpoints
+globs: "bootstrap.sh,scripts/*.sh"
+alwaysApply: false
+---
+
+# chris-devstrap
+
+- Start scripts with `#!/usr/bin/env bash` and `set -euo pipefail` when the script is executed (not for files that are **sourced only**, e.g. `lib.sh` / `ui.sh` / `sudo-keepalive.sh` — use `# shellcheck shell=bash` there).
+- After edits, `bash -n` must pass on `bootstrap.sh` and every `scripts/*.sh` (CI in `.github/workflows/ci.yml` also runs **ShellCheck** with repo `.shellcheckrc`).
+- Source shared helpers with a path relative to the current file, and tell shellcheck the path from `scripts/`:
+
+  ```bash
+  # shellcheck source=lib.sh
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+  ```
+
+  `lib.sh` defines `CHRIS_DEVSTRAP_ROOT`, `CHRIS_DEVSTRAP_SCRIPTS_DIR`, `ROOT`, `chris_run`, `chris_eval_brew_shellenv`, `chris_brew_prefix_path`, `chris_brew_bundle_dev_maybe` (installs `Brewfile.dev` when present unless `CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1`), and pulls in `ui.sh`.
+
+- Prefer `chris_run` for side effects that should honor `CHRIS_DEVSTRAP_DRY_RUN=1` (set by `./bootstrap.sh --dry-run`). Do not duplicate dry-run print logic.
+- Homebrew: use `brew bundle install --no-upgrade --file=…` / `brew bundle check --no-upgrade`. Do **not** use deprecated `brew bundle --no-lock`.
+- Dock: `scripts/dock.sh` uses `config/dock-remove.txt` and `config/dock-add.tsv`; `dockutil --remove all` first, then adds **`~/Downloads`** as **others** / **fan** / **`datemodified`** unless you intentionally change that contract.
+- Bootstrap step order lives in `bootstrap.sh` (`step_progress` 1–9); keep README and user-facing messaging aligned when adding or reordering steps.
+- Prefer small, focused diffs; avoid unrelated refactors and extra docs the user did not ask for.

@@ -1,0 +1,7 @@
+# Developer extras (e.g. mise). When this file exists, bootstrap and scripts/update.sh
+# run `brew bundle install` for it by default. Opt out for that run:
+#   CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1 ./bootstrap.sh
+#   CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1 ./bootstrap.sh update
+# Manual: brew bundle install --no-upgrade --file=Brewfile.dev
+
+brew "mise"

@@ -1,0 +1,11 @@
+# Optional second pass: `scripts/dock.sh` already runs
+#   dockutil --remove all --no-restart
+# first, which clears user app tiles and folder stacks (Finder and Trash are
+# macOS-managed and often remain). Add one label per line below only if something
+# still needs an explicit remove after that reset (missing items are ignored).
+#
+# Intentionally omit Messages — it is (re)added from dock-add.tsv.
+#
+# Examples (uncomment if needed on your OS / dockutil version):
+# Apps
+# Applications

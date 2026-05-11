@@ -1,0 +1,2 @@
+# Dynamic source "$(cd …)/lib.sh" — shellcheck cannot resolve; each script has # shellcheck source=lib.sh
+disable=SC1091

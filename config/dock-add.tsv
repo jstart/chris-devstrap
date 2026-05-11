@@ -1,0 +1,9 @@
+# Tab-separated: DockLabel	/App/Path.app  (lines starting with # ignored)
+# Only these apps are added, in order, after dock.sh clears the Dock.
+
+Messages	/System/Applications/Messages.app
+Google Chrome	/Applications/Google Chrome.app
+Cursor	/Applications/Cursor.app
+Xcode	/Applications/Xcode.app
+iTerm	/Applications/iTerm.app
+Notes	/System/Applications/Notes.app

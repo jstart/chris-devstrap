@@ -1,0 +1,31 @@
+name: chris-devstrap bash syntax
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  bash-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash -n on bootstrap and scripts
+        run: |
+          set -euo pipefail
+          bash -n bootstrap.sh install.sh
+          for f in scripts/*.sh; do
+            bash -n "$f"
+          done
+          echo "OK: bash -n passed"
+      - name: shellcheck (pinned release)
+        env:
+          SC_VERSION: v0.10.0
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/shellcheck.txz \
+            "https://github.com/koalaman/shellcheck/releases/download/${SC_VERSION}/shellcheck-${SC_VERSION}.linux.x86_64.tar.xz"
+          tar -xJf /tmp/shellcheck.txz -C /tmp
+          chmod +x "/tmp/shellcheck-${SC_VERSION}/shellcheck"
+          "/tmp/shellcheck-${SC_VERSION}/shellcheck" -x bootstrap.sh install.sh scripts/*.sh
+          echo "OK: shellcheck passed"
