@@ -70,6 +70,7 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | `CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS` | **Default on:** unset or non-`0` disables **all** macOS UI sound effects during `macos-defaults.sh` (same scope as **System Settings → Sound → Sound Effects**; includes screenshot shutter). Set to **`0`** to leave UI sounds enabled. Apple has no screenshot-only toggle. |
 | `CHRIS_DEVSTRAP_SKIP_SBEDIT_INSTALL=1` | Skip downloading/installing the **sbedit** `.pkg` in `finder-sidebar.sh` (sidebar CLI has no Homebrew formula). |
 | `CHRIS_DEVSTRAP_SBEDIT_PKG_URL` | Override URL for the **sbedit** installer pkg (default: sidebar-editor **1.0** release asset on GitHub). |
+| `CHRIS_DEVSTRAP_SKIP_ITERM_REUSE_DIRECTORY=1` | Skip patching iTerm2's plist for **Initial directory → Reuse previous session** (`scripts/iterm.sh`). |
 | `CHRIS_DEVSTRAP_SKIP_DEFAULT_BROWSER=1` | Skip the default-browser step in `macos-defaults.sh`. |
 | `CHRIS_DEVSTRAP_SKIP_HEADSHOT=1` | Skip `scripts/headshot.sh` (no `Downloads` copy / no `dscl` user picture). |
 | `CHRIS_DEVSTRAP_DEFAULT_BROWSER` | First argument to `defaultbrowser` when Chrome is installed (default `chrome`). |
@@ -103,7 +104,7 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | Dock | `scripts/dock.sh` — `defaults` for autohide + **tilesize / largesize 128**; `dockutil --remove all`, `config/dock-remove.txt`, `config/dock-add.tsv`; **`~/Downloads`** fan (**others**, date modified); `killall Dock` |
 | Raycast / Spotlight | `scripts/raycast-hotkey.sh` |
 | GitHub SSH + `origin` | `scripts/git-ssh-setup.sh` (end of bootstrap when criteria match) |
-| Raycast / Cursor / iTerm + iTerm hints | `scripts/iterm.sh` opens those apps when present (iTerm with repo path); respects dry-run |
+| Raycast / Cursor / iTerm + iTerm prefs | `scripts/iterm.sh` — sets iTerm2 **Custom Directory** = **Recycle** (reuse previous session) on all **New Bookmarks** profiles when `com.googlecode.iterm2.plist` exists; opens apps when present; iTerm keybinding hints in manual todos |
 
 
 ## Manual steps
