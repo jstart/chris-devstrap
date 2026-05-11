@@ -93,6 +93,16 @@ fi
 step_start "Spotlight menu bar icon"
 chris_run defaults -currentHost write com.apple.Spotlight MenuItemHidden -int 1 || true
 
+# System Settings → Control Center → Sound → "Always Show" in menu bar (undocumented; 18 = show, 24 = hide — see nix-darwin controlcenter).
+step_start "Control Center: Sound icon always in menu bar"
+_cc_byhost="${HOME}/Library/Preferences/ByHost"
+_cc_plist="${_cc_byhost}/com.apple.controlcenter.plist"
+if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" != 1 ]]; then
+  mkdir -p "$_cc_byhost"
+fi
+chris_run defaults write "$_cc_plist" Sound -int 18 || true
+step_info "Apple can change Control Center plist keys; if Sound does not stay visible, set Control Center → Sound → Always Show once in System Settings."
+
 step_start "Default browser (${CHRIS_DEVSTRAP_DEFAULT_BROWSER:-chrome})"
 if [[ "${CHRIS_DEVSTRAP_SKIP_DEFAULT_BROWSER:-0}" == "1" ]]; then
   step_info "Skipping default browser (CHRIS_DEVSTRAP_SKIP_DEFAULT_BROWSER=1)."
