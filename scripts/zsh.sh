@@ -195,8 +195,54 @@ append_shell_aliases() {
   step_ok "Shell aliases appended"
 }
 
+install_dismiss_mac_notifications() {
+  local src="$ROOT/templates/dismiss-mac-notifications"
+  local dest="${HOME}/bin/DismissMacNotifications"
+  step_start "Dismiss Notification Center scripts (${dest})"
+  if [[ ! -f "$src/dismiss-notifications.sh" ]] || [[ ! -f "$src/dismiss-notifications.jxa" ]]; then
+    step_warn "Missing $src/dismiss-notifications.{sh,jxa} — skipping"
+    return 0
+  fi
+  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+    step_info "Would mkdir -p $dest and copy dismiss-notifications.{sh,jxa}; chmod +x shell wrapper"
+    return 0
+  fi
+  mkdir -p "$dest"
+  cp -f "$src/dismiss-notifications.sh" "$src/dismiss-notifications.jxa" "$dest/"
+  chmod +x "$dest/dismiss-notifications.sh"
+  step_ok "Scripts installed (JXA UI automation; Accessibility required for the calling app)"
+  if [[ -f "$src/KEYBOARD_SHORTCUT_SETUP.txt" ]]; then
+    cp -f "$src/KEYBOARD_SHORTCUT_SETUP.txt" "$dest/"
+  fi
+}
+
+append_dismiss_notifications_shell() {
+  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+    step_info "Would append dismissnotifications helper to ~/.zshrc if missing"
+    return 0
+  fi
+  [[ -f "$HOME/.zshrc" ]] || touch "$HOME/.zshrc"
+  if grep -qF 'chris-devstrap: dismiss mac notifications (begin)' "$HOME/.zshrc" 2>/dev/null; then
+    return 0
+  fi
+  step_start "Append dismissnotifications to ~/.zshrc"
+  cat >>"$HOME/.zshrc" <<'EOF'
+
+# --- chris-devstrap: dismiss mac notifications (begin) ---
+# Installed to ~/bin/DismissMacNotifications (see KEYBOARD_SHORTCUT_SETUP.txt there for Shortcuts).
+# First run: grant Accessibility for Terminal / iTerm / Shortcuts when macOS prompts.
+dismissnotifications() {
+  command "${HOME}/bin/DismissMacNotifications/dismiss-notifications.sh" "$@"
+}
+# --- chris-devstrap: dismiss mac notifications (end) ---
+EOF
+  step_ok "dismissnotifications block appended"
+}
+
 install_oh_my_zsh
 merge_zshrc
 sanitize_zshrc_artifacts
 append_shell_extras
 append_shell_aliases
+install_dismiss_mac_notifications
+append_dismiss_notifications_shell

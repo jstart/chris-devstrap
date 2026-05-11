@@ -1,0 +1,164 @@
+#!/usr/bin/osascript -l JavaScript
+// Adapted from community solutions discussed at:
+// https://apple.stackexchange.com/questions/155670/macos-keyboard-shortcut-to-dismiss-notifications
+// Requires Accessibility permission for the app that runs osascript (Shortcuts, Terminal, etc.).
+
+"use strict";
+
+function len(x) {
+  if (x === null || x === undefined) return 0;
+  try {
+    return x.length;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function at(coll, i) {
+  if (!coll) return null;
+  try {
+    if (len(coll) <= i) return null;
+    return coll.at(i);
+  } catch (e) {
+    return null;
+  }
+}
+
+function findCloseAction(group) {
+  try {
+    if (!group || !group.actions) return null;
+    const acts = group.actions();
+    const n = len(acts);
+    var clearAll = null;
+    var close = null;
+    for (var i = 0; i < n; i++) {
+      var action = at(acts, i);
+      if (!action) continue;
+      var desc = action.description();
+      if (desc === "Clear All") clearAll = action;
+      else if (desc === "Close") close = action;
+    }
+    return clearAll !== null ? clearAll : close;
+  } catch (e) {
+    return null;
+  }
+}
+
+function run() {
+  try {
+    runInner();
+  } catch (e) {
+    /* Never fail the shortcut / shell with UI scripting errors. */
+  }
+}
+
+function runInner() {
+  const CurrentApplication = (() => {
+    const app = Application.currentApplication();
+    app.includeStandardAdditions = true;
+    return app;
+  })();
+  const SystemEvents = Application("System Events");
+  const NotificationCenter =
+    SystemEvents.processes.byName("NotificationCenter");
+  const macOSSequoiaOrGreater =
+    parseFloat(CurrentApplication.systemInfo().systemVersion) >= 15.0;
+
+  const groupsToTry = [];
+
+  function pushUniqueGroups(arr) {
+    try {
+      if (!arr) return;
+      var n = len(arr);
+      for (var i = 0; i < n; i++) {
+        var g = at(arr, i);
+        if (g) groupsToTry.push(g);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function collectSequoiaStyle() {
+    try {
+      var windows = NotificationCenter.windows;
+      if (len(windows) < 1) return;
+
+      var w = at(windows, 0);
+      if (!w) return;
+      var wg = w.groups;
+      if (len(wg) < 1) return;
+
+      var g0 = at(wg, 0);
+      if (!g0) return;
+      var gg = g0.groups;
+      if (len(gg) < 1) return;
+
+      var g1 = at(gg, 0);
+      if (!g1) return;
+      var sa = g1.scrollAreas;
+      if (len(sa) < 1) return;
+
+      var scroll = at(sa, 0);
+      if (!scroll) return;
+
+      var groupsFromScroll = scroll.groups();
+      if (len(groupsFromScroll) < 1) return;
+
+      var firstGrp = at(groupsFromScroll, 0);
+      if (firstGrp && firstGrp.uiElements) {
+        try {
+          pushUniqueGroups(firstGrp.uiElements());
+        } catch (e) { /* ignore */ }
+      }
+      pushUniqueGroups(groupsFromScroll);
+    } catch (e) { /* ignore */ }
+  }
+
+  function collectLegacyStyle() {
+    try {
+      var windows = NotificationCenter.windows;
+      if (len(windows) < 1) return;
+
+      var w = at(windows, 0);
+      if (!w) return;
+      var wg = w.groups;
+      if (len(wg) < 1) return;
+
+      var g0 = at(wg, 0);
+      if (!g0) return;
+      var sa = g0.scrollAreas;
+      if (len(sa) < 1) return;
+
+      var scroll = at(sa, 0);
+      if (!scroll) return;
+
+      var ue = scroll.uiElements;
+      if (len(ue) < 1) return;
+
+      var inner = at(ue, 0);
+      if (!inner || !inner.groups) return;
+
+      pushUniqueGroups(inner.groups);
+    } catch (e) { /* ignore */ }
+  }
+
+  try {
+    if (macOSSequoiaOrGreater) {
+      collectSequoiaStyle();
+    }
+    if (groupsToTry.length === 0) {
+      collectLegacyStyle();
+    }
+    if (groupsToTry.length === 0 && macOSSequoiaOrGreater) {
+      collectLegacyStyle();
+    }
+  } catch (e) { /* ignore */ }
+
+  for (var j = 0; j < groupsToTry.length; j++) {
+    var action = findCloseAction(groupsToTry[j]);
+    if (action) {
+      try {
+        action.perform();
+      } catch (e) { /* ignore */ }
+    }
+  }
+}
