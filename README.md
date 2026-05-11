@@ -69,6 +69,7 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | `CHRIS_DEVSTRAP_SKIP_SUDO_PRIME=1` | Skip sudo prime/keepalive before bundle/defaults. |
 | `CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=1` | During `macos-defaults.sh`, disable **all** macOS UI sound effects (`com.apple.systemsound` + `-g` / NSGlobalDomain `com.apple.sound.uiaudio.enabled` — same scope as **System Settings → Sound → Sound Effects**; includes the screenshot “camera” sound; Apple has no screenshot-only toggle). |
 | `CHRIS_DEVSTRAP_SKIP_DEFAULT_BROWSER=1` | Skip the default-browser step in `macos-defaults.sh`. |
+| `CHRIS_DEVSTRAP_SKIP_HEADSHOT=1` | Skip `scripts/headshot.sh` (no `Downloads` copy / no `dscl` user picture). |
 | `CHRIS_DEVSTRAP_DEFAULT_BROWSER` | First argument to `defaultbrowser` when Chrome is installed (default `chrome`). |
 | `CHRIS_DEVSTRAP_GIT_SSH_URL` | Desired SSH `origin` (default `git@github.com:jstart/chris-devstrap.git`). |
 | `CHRIS_DEVSTRAP_SKIP_SSH=1` | Skip `git-ssh-setup.sh` (automation). |
@@ -94,6 +95,7 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | Zsh / Oh My Zsh + snippet | `scripts/zsh.sh`, `templates/zshrc.snippet`, `templates/zsh-aliases.snippet` (git/shell shortcuts appended if missing) |
 | Global Git defaults (no user.name) | `scripts/git-config.sh` |
 | Finder; Desktop & Dock window prefs; trackpad (**tap to click** + firm press / Force Click off); screenshots; default browser (`defaultbrowser` when installed); hot corners (top → sleep display; bottom → off); hide desktop widgets | `scripts/macos-defaults.sh` |
+| Headshot → **`~/Downloads/headshot.png`** + macOS **local user** login picture (`dscl`, needs **`assets/headshot.png`** in the repo) | `scripts/headshot.sh` (see [`assets/README.md`](assets/README.md); Apple ID / Chrome / Messages avatars stay manual) |
 | Xcode first launch + iOS Simulator download | `scripts/xcode-components.sh` (skipped without full Xcode / on dry-run; errors are warnings) |
 | `~/Developer` layout + sidebar | `scripts/finder-sidebar.sh` |
 | Dock | `scripts/dock.sh` — `defaults` for autohide + **tilesize / largesize 128**; `dockutil --remove all`, `config/dock-remove.txt`, `config/dock-add.tsv`; **`~/Downloads`** fan (**others**, date modified); `killall Dock` |
@@ -128,6 +130,7 @@ macOS TCC cannot be granted from this repo. Use each app once, then **System Set
 - **Appearance still light** — `defaults write … AppleInterfaceStyle` can lag until **System Settings → Appearance → Dark** is toggled once, a **full logout/login**, or **Apple Intelligence / accent** quirks on newer macOS; bootstrap also restarts Finder afterward.
 - **Desktop & Dock → Windows** — Bootstrap sets `AppleWindowTabbingMode`, `NSCloseAlwaysConfirmsChanges`, and `NSQuitAlwaysKeepsWindows` on `NSGlobalDomain`, plus `StandardHideWidgets` on `com.apple.WindowManager` (hide desktop widgets). **System Settings** may show stale labels until that pane is reopened; per-app behavior can require **quitting the app** (some cache). Logout is rarely needed; bootstrap already `killall`s Finder, SystemUIServer, and Dock.
 - **Trackpad → tap to click** — `macos-defaults.sh` sets built-in + Bluetooth `Clicking` and `com.apple.mouse.tapBehavior` (`1` = tap to click). If **System Settings → Trackpad** still shows it off, close that pane and reopen, or log out/in (same pattern as other `defaults` UI lag).
+- **Headshot / user picture** — Add your photo as **`assets/headshot.png`** in the repo, then re-run bootstrap. **`dscl`** may require **sudo** and can fail on some builds; use **System Settings → Users & Groups** and drag **`~/Downloads/headshot.png`** onto your avatar. **Apple ID, Chrome, Messages,** etc. do not share one API—use **`assets/README.md`** and the end-of-bootstrap **Manual follow-ups** lines for those.
 - **`brew` not in new terminals** — Ensure `~/.zprofile` contains the brew shellenv block from `scripts/brew.sh`.
 - **`~/.zshrc`: `command not found: history-substring-search` / parse error near `)`** — Usually a broken multiline `plugins=(` … `)` block. A common leftover is `plugins=(git)` followed by bare `git` and `)` (running `git` with no args prints the usage banner). **`scripts/zsh.sh`** merges multiline `plugins` and **sanitizes** orphan lines. Re-run **`bash scripts/zsh.sh`** or fix by hand: one valid `plugins=(…)` line and no stray plugin lines.
 - **Opening a terminal prints `git` usage** — Follow-on from a broken **`~/.zshrc`**; fix **`plugins=`** then `exec zsh`.

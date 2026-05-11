@@ -183,6 +183,8 @@ bash "$ROOT/scripts/git-config.sh"
 step_progress 4 9 "macOS defaults (Finder, trackpad, screenshots, …)"
 bash "$ROOT/scripts/macos-defaults.sh"
 
+bash "$ROOT/scripts/headshot.sh"
+
 step_progress 5 9 "Xcode (first launch + iOS Simulator runtime)"
 if [[ "$CHRIS_DEVSTRAP_DRY_RUN" == 1 ]]; then
   step_info "Skipping Xcode components: dry-run (full Xcode only; see README: Xcode → Settings → Components)."
