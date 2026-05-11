@@ -21,6 +21,32 @@ chris_run defaults write com.apple.finder ShowStatusBar -bool true || true
 chris_run defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false || true
 chris_run defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true || true
 
+# Finder: new windows open in ~/Downloads; column view is already FXPreferredViewStyle=clmv above.
+# Global NSNavLastRootDirectory is a best-effort hint for some Cocoa save/open panels (not universal).
+# Sort-by-date defaults + PlistBuddy paths vary by macOS; failures are ignored.
+step_start "Finder: new window → Downloads; default sort date modified (best effort)"
+_chris_downloads_uri="$(python3 -c 'import pathlib; print(pathlib.Path.home().joinpath("Downloads").as_uri())')"
+chris_run defaults write com.apple.finder NewWindowTarget -string PfLo || true
+chris_run defaults write com.apple.finder NewWindowTargetPath -string "$_chris_downloads_uri" || true
+chris_run defaults write NSGlobalDomain NSNavLastRootDirectory -string "${HOME}/Downloads" || true
+chris_run defaults write com.apple.finder FXArrangeGroupViewBy -string dateModified || true
+chris_run defaults write com.apple.finder FXPreferredGroupBy -string dateModified || true
+chris_run defaults write com.apple.finder FK_ArrangeBy -string dateModified || true
+_finder_plist="${HOME}/Library/Preferences/com.apple.finder.plist"
+if [[ -f "$_finder_plist" ]]; then
+  for _chris_pb in \
+    'Set :StandardViewSettings:ExtendedListViewSettingsV2:sortColumn dateModified' \
+    'Set :StandardViewSettings:ExtendedListViewSettingsV2:arrangeBy dateModified' \
+    'Set :StandardViewSettings:ListViewSettings:sortColumn dateModified' \
+    'Set :StandardViewSettings:ListViewSettings:arrangeBy dateModified' \
+    'Set :StandardViewSettings:ExtendedListViewSettings:sortColumn dateModified' \
+    'Set :FK_DefaultListViewSettingsV2:sortColumn dateModified' \
+    'Set :FK_DefaultListViewSettingsV2:arrangeBy dateModified'; do
+    chris_run /usr/libexec/PlistBuddy -c "$_chris_pb" "$_finder_plist" || true
+  done
+fi
+step_info "Per-folder .DS_Store can override sort; delete .DS_Store in a folder or use View → Show View Options → Use as Defaults. Many apps remember their own last path in open/save sheets."
+
 step_start "Desktop & Dock: windows (tabs, save prompts, resume)"
 # System Settings → Desktop & Dock → Windows
 chris_run defaults write NSGlobalDomain AppleWindowTabbingMode -string fullscreen || true
