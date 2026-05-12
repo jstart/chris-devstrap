@@ -14,5 +14,6 @@ cask "cursor"
 # brew bundle check ignores these lines when the path exists, so healthcheck matches reality.
 cask "google-chrome" unless File.exist?("/Applications/Google Chrome.app")
 cask "iterm2"
+cask "monitorcontrol"
 cask "raycast"
 cask "slack" unless File.exist?("/Applications/Slack.app")
