@@ -182,8 +182,9 @@ bash "$ROOT/scripts/finder-sidebar.sh"
 step_progress 7 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Dock (defaults + dockutil)"
 bash "$ROOT/scripts/dock.sh"
 
-step_progress 8 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Raycast / Spotlight hotkey prep"
+step_progress 8 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Raycast / Spotlight hotkey prep + Script Commands"
 bash "$ROOT/scripts/raycast-hotkey.sh"
+bash "$ROOT/scripts/raycast-script-commands.sh"
 
 step_progress 9 "$CHRIS_DEVSTRAP_BOOT_STEPS" "GitHub SSH + git origin"
 if [[ "$CHRIS_DEVSTRAP_DRY_RUN" == 1 ]]; then

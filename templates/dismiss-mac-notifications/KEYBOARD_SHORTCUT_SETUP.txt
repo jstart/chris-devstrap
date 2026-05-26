@@ -1,30 +1,40 @@
-Dismiss Mac notifications — keyboard shortcut (Shortcuts)
-=========================================================
+Dismiss Mac Notifications — bind ⌘⌃Z (Command + Control + Z)
+=============================================================
 
-1) Open the Shortcuts app → click + (New Shortcut).
+Recommended hotkey: ⌘⌃Z. chris-devstrap surfaces this same checklist as a
+manual TODO at the end of every ./bootstrap.sh run; this file is the offline
+copy installed at ~/bin/DismissMacNotifications/KEYBOARD_SHORTCUT_SETUP.txt.
 
-2) Add Action: search for "Run Shell Script" and add it.
+Two paths — pick one (or both):
 
+A) Raycast Script Commands (preferred — automated install)
+----------------------------------------------------------
+chris-devstrap drops a Raycast script command into
+  ~/Library/Application Support/chris-devstrap/raycast-script-commands/
+(see scripts/raycast-script-commands.sh). Then, in Raycast:
+
+1) Settings (⌘,) → Extensions → Script Commands → "+" → User Folder
+   → choose the directory above.
+2) Extensions → search "Dismiss Mac Notifications" → click the Hotkey field
+   → press ⌘⌃Z.
+3) First run: grant Accessibility to Raycast
+   (System Settings → Privacy & Security → Accessibility).
+
+B) Shortcuts.app (built-in macOS, no extra app)
+-----------------------------------------------
+1) Open Shortcuts.app → File → New Shortcut (⌘N).
+2) Add Action: search "Run Shell Script" and add it.
 3) In Run Shell Script:
    - Shell: /bin/bash
    - Pass Input: (default is fine)
+4) Script body (one line):
+     $HOME/bin/DismissMacNotifications/dismiss-notifications.sh
+   (Or the absolute path from: ls -la ~/bin/DismissMacNotifications/dismiss-notifications.sh)
+5) Rename the shortcut to: Dismiss Mac Notifications
+6) Open Shortcut Details (ⓘ) → Add Keyboard Shortcut → press ⌘⌃Z.
+7) First run: grant Accessibility to Shortcuts
+   (System Settings → Privacy & Security → Accessibility).
 
-4) Paste this single line as the entire script body (after chris-devstrap bootstrap):
-
-   $HOME/bin/DismissMacNotifications/dismiss-notifications.sh
-
-   Or use the absolute path shown by: ls -la ~/bin/DismissMacNotifications/dismiss-notifications.sh
-
-5) Name the shortcut (e.g. "Dismiss Mac Notifications") via the title at the top.
-
-6) Open shortcut details (ⓘ or sidebar):
-   - Turn on "Use as Quick Action" if you want it in the Services menu (optional).
-   - Under "Shortcut details" / keyboard: assign a Keyboard Shortcut (e.g. Ctrl+Option+D).
-
-7) First run: allow Accessibility for Shortcuts when macOS prompts.
-
-Optional — run from Terminal without opening Shortcuts:
-  dismissnotifications
-
-Optional — if you create a shortcut named exactly "Dismiss Mac Notifications":
-  shortcuts run "Dismiss Mac Notifications"
+Run without a hotkey:
+  dismissnotifications                          # zsh function appended by chris-devstrap
+  shortcuts run "Dismiss Mac Notifications"    # only after path B above

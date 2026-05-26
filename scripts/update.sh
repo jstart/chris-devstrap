@@ -73,6 +73,7 @@ _main() {
       finder-sidebar.sh
       dock.sh
       raycast-hotkey.sh
+      raycast-script-commands.sh
       iterm.sh
     )
     local s
