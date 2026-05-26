@@ -8,9 +8,23 @@ step_start "macOS defaults (appearance, Finder, trackpad, screenshots)"
 hr
 
 step_start "Dark mode + Finder"
+# osascript talks to the live appearance daemon so the menu bar / Finder flip immediately.
+# Falls back to `defaults` for fresh accounts where System Events is not yet wired up.
+_chris_darkmode_osa_failed=0
+if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+  chris_run osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to true'
+elif ! osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to true' >/dev/null 2>&1; then
+  _chris_darkmode_osa_failed=1
+fi
 chris_run defaults write NSGlobalDomain AppleInterfaceStyle -string Dark || true
 chris_run defaults write -g AppleInterfaceStyle -string Dark || true
-step_info "Dark mode uses defaults; if the menu bar stays light, toggle once in System Settings → Appearance, or log out/in — some macOS builds defer until then."
+step_info "Dark mode: osascript (live) + defaults (fallback). First run may prompt for Automation permission (System Settings → Privacy & Security → Automation → your terminal → System Events); grant it once and future runs flip dark mode silently."
+if [[ "$_chris_darkmode_osa_failed" == 1 ]]; then
+  step_warn "osascript dark-mode toggle failed (likely Automation permission). Defaults still written; menu bar may stay light until logout/login or until you grant Automation."
+  chris_manual_todo_block "Dark mode — grant Automation permission:" \
+    "  System Settings → Privacy & Security → Automation → your terminal → System Events" \
+    "  Re-run: osascript -e 'tell application \"System Events\" to tell appearance preferences to set dark mode to true'"
+fi
 chris_run defaults write com.apple.finder FXPreferredViewStyle -string clmv || true
 chris_run defaults write com.apple.finder ShowRecentTags -bool false || true
 chris_run defaults write com.apple.finder ShowPathbar -bool true || true
@@ -144,11 +158,5 @@ else
   killall Finder 2>/dev/null || true
   killall SystemUIServer 2>/dev/null || true
   killall Dock 2>/dev/null || true
-fi
-
-if command -v xcodebuild &>/dev/null; then
-  if ! xcodebuild -license status 2>/dev/null | grep -qi 'agreed'; then
-    chris_manual_todo "Full Xcode: accept the license with sudo xcodebuild -license accept"
-  fi
 fi
 

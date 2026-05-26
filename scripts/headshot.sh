@@ -27,9 +27,42 @@ _support_png="${_support_dir}/headshot.png"
 _downloads_copy="${HOME}/Downloads/headshot.png"
 _u="/Users/$(whoami)"
 
+# True when the local account already has a Picture path (pointing at a real file)
+# or any JPEGPhoto bytes stored — we skip the destructive sudo dscl re-apply in either case.
+# dscl wraps values containing spaces onto a continuation line, e.g.:
+#   Picture:
+#    /Users/me/Library/Application Support/chris-devstrap/headshot.jpg
+# Handle both inline ("Picture: /path") and continuation forms.
+_chris_user_picture_set() {
+  local pic
+  pic="$(dscl . -read "${_u}" Picture 2>/dev/null | awk '
+    NR == 1 {
+      sub(/^Picture:[[:space:]]*/, "", $0)
+      if (length($0) > 0) { print $0; exit }
+      next
+    }
+    {
+      sub(/^[[:space:]]+/, "", $0)
+      if (length($0) > 0) { print $0; exit }
+    }
+  ')"
+  if [[ -n "$pic" && -f "$pic" ]]; then
+    return 0
+  fi
+  if dscl . -read "${_u}" JPEGPhoto 2>/dev/null | grep -q '^JPEGPhoto:'; then
+    return 0
+  fi
+  return 1
+}
+
 step_start "Headshot → Downloads + macOS user picture"
 
 if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+  if [[ "${CHRIS_DEVSTRAP_FORCE_HEADSHOT:-0}" != "1" ]] && _chris_user_picture_set; then
+    step_info "Would skip dscl Picture update — local user already has a picture set (CHRIS_DEVSTRAP_FORCE_HEADSHOT=1 to overwrite)."
+    chris_run cp -f "$SRC" "$_downloads_copy"
+    exit 0
+  fi
   step_info "Would: sips → ${_support_img} (or ${_support_png}), cp → ${_downloads_copy}, sudo dscl Picture for ${_u}, refresh SystemUIServer/Finder."
   chris_run sips -s format jpeg "$SRC" --out "$_support_img"
   chris_run cp -f "$SRC" "$_downloads_copy"
@@ -38,6 +71,14 @@ if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
   chris_run sudo dscl . -create "${_u}" Picture "${_support_img}"
   chris_run killall SystemUIServer
   chris_run killall Finder
+  exit 0
+fi
+
+if [[ "${CHRIS_DEVSTRAP_FORCE_HEADSHOT:-0}" != "1" ]] && _chris_user_picture_set; then
+  step_ok "macOS user picture already set — skipping dscl update (CHRIS_DEVSTRAP_FORCE_HEADSHOT=1 to overwrite)."
+  mkdir -p "${HOME}/Downloads"
+  cp -f "$SRC" "$_downloads_copy"
+  step_info "Refreshed ${_downloads_copy} for reference."
   exit 0
 fi
 

@@ -105,11 +105,10 @@ _main() {
   fi
 
   step_info "iTerm keybinding tips are listed under \"Manual follow-ups\" at the end of this bootstrap run."
-  chris_manual_todo "iTerm2 — Natural Text Editing:"
-  chris_manual_todo "  Settings (⌘,) → Profiles → [profile] → Keys → Key Bindings"
-  chris_manual_todo "  Presets… → Natural Text Editing"
-  chris_manual_todo "  https://iterm2.com/documentation-preferences-profiles-keys.html"
-  chris_manual_todo "iTerm2 tab keys: add ⌘⌥← → Previous Tab and ⌘⌥→ → Next Tab under Key Mappings (remove conflicts first)."
+  chris_manual_todo_block "iTerm2 setup:" \
+    "  Settings (⌘,) → Profiles → [profile] → Keys → Key Bindings → Presets… → Natural Text Editing" \
+    "  https://iterm2.com/documentation-preferences-profiles-keys.html" \
+    "  Tab keys: add ⌘⌥← → Previous Tab and ⌘⌥→ → Next Tab under Key Mappings (remove conflicts first)"
 
   _open_app "Raycast" "/Applications/Raycast.app"
   _open_app "Cursor" "/Applications/Cursor.app"

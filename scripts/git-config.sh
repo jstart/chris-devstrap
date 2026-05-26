@@ -28,8 +28,9 @@ _main() {
   _git_set_if_missing pull.rebase false
   _git_set_if_missing rerere.enabled true
 
-  chris_manual_todo "git config --global user.name '…' and user.email '…' when ready (not set by this script)."
-  chris_manual_todo "Commit signing (SSH or GPG): https://docs.github.com/en/authentication/managing-commit-signature-verification"
+  chris_manual_todo_block "Git identity:" \
+    "  git config --global user.name '…' and user.email '…' when ready (not set by this script)" \
+    "  Commit signing (SSH or GPG): https://docs.github.com/en/authentication/managing-commit-signature-verification"
   step_ok "Git global defaults applied (where missing)"
 }
 

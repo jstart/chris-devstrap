@@ -6,6 +6,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
+CHRIS_DEVSTRAP_BOOT_STEPS=10
+CHRIS_DEVSTRAP_XCODE_AT_START=0
+if [[ -d "/Applications/Xcode.app" ]] || xcode-select -p 2>/dev/null | grep -Fq '.app/Contents/Developer'; then
+  CHRIS_DEVSTRAP_XCODE_AT_START=1
+fi
+
 CHRIS_DEVSTRAP_DRY_RUN=0
 SUBCOMMAND=""
 
@@ -152,7 +158,7 @@ step_info "Log file: $LOG_FILE"
 step_info "dry_run=${CHRIS_DEVSTRAP_DRY_RUN}"
 hr
 
-step_progress 1 9 "Homebrew (Xcode CLT, install, shellenv)"
+step_progress 1 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Command Line Tools + Homebrew (shellenv)"
 bash "$ROOT/scripts/brew.sh"
 
 if ! chris_eval_brew_shellenv; then
@@ -168,7 +174,7 @@ fi
 
 chris_devstrap_sudo_prime_and_keepalive
 
-step_progress 2 9 "brew bundle (check + install)"
+step_progress 2 "$CHRIS_DEVSTRAP_BOOT_STEPS" "brew bundle (check + install)"
 step_start "brew bundle check (--no-upgrade: presence, not latest)"
 brew bundle check --no-upgrade --file="$ROOT/Brewfile" --verbose || true
 
@@ -181,49 +187,64 @@ else
   chris_brew_bundle_dev_maybe
 fi
 
-step_progress 3 9 "Zsh + Oh My Zsh"
+if [[ -f "$ROOT/Brewfile.heavy" ]] && [[ "${CHRIS_DEVSTRAP_SKIP_HEAVY:-0}" != "1" ]]; then
+  chris_manual_todo_block "Apple ID + Mac App Store — required for Xcode via mas:" \
+    "  System Settings → Apple Account → Sign In" \
+    "  Open the App Store app and sign in — mas signin is not supported on modern macOS"
+fi
+
+step_progress 3 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Zsh + Oh My Zsh"
 bash "$ROOT/scripts/zsh.sh"
 bash "$ROOT/scripts/git-config.sh"
 
-step_progress 4 9 "macOS defaults (Finder, trackpad, screenshots, …)"
+step_progress 4 "$CHRIS_DEVSTRAP_BOOT_STEPS" "macOS defaults (Finder, trackpad, screenshots, …)"
 bash "$ROOT/scripts/macos-defaults.sh"
 
 bash "$ROOT/scripts/headshot.sh"
 
-step_progress 5 9 "Xcode (first launch + iOS Simulator runtime)"
+step_progress 5 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Xcode (first launch + iOS Simulator runtime)"
 if [[ "$CHRIS_DEVSTRAP_DRY_RUN" == 1 ]]; then
   step_info "Skipping Xcode components: dry-run (full Xcode only; see README: Xcode → Settings → Components)."
-elif [[ -d "/Applications/Xcode.app" ]] || xcode-select -p 2>/dev/null | grep -Fq '.app/Contents/Developer'; then
+elif [[ "$CHRIS_DEVSTRAP_XCODE_AT_START" == "1" ]]; then
   bash "$ROOT/scripts/xcode-components.sh" || true
 else
-  step_info "Skipping Xcode components: no /Applications/Xcode.app and active developer dir is not an Xcode.app bundle (CLT-only is normal until you install full Xcode)."
+  step_info "Skipping Xcode components for now — Xcode not installed yet; runs after heavy install in step ${CHRIS_DEVSTRAP_BOOT_STEPS}, or re-run bootstrap."
 fi
 
-step_progress 6 9 "Developer layout + Finder sidebar"
+step_progress 6 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Developer layout + Finder sidebar"
 bash "$ROOT/scripts/finder-sidebar.sh"
 
-step_progress 7 9 "Dock (defaults + dockutil)"
+step_progress 7 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Dock (defaults + dockutil)"
 bash "$ROOT/scripts/dock.sh"
 
-step_progress 8 9 "Raycast / Spotlight hotkey prep"
+step_progress 8 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Raycast / Spotlight hotkey prep"
 bash "$ROOT/scripts/raycast-hotkey.sh"
 
-step_progress 9 9 "GitHub SSH + git origin"
+step_progress 9 "$CHRIS_DEVSTRAP_BOOT_STEPS" "GitHub SSH + git origin"
 if [[ "$CHRIS_DEVSTRAP_DRY_RUN" == 1 ]]; then
-  step_info "Dry-run: skipping GitHub SSH setup. Full runs invoke ./scripts/git-ssh-setup.sh when needed (see README: idempotent rerun + CHRIS_DEVSTRAP_FORCE_SSH_SETUP)."
+  step_info "Dry-run: skipping GitHub SSH setup. Full runs invoke ./scripts/git-ssh-setup.sh when needed."
+  step_info "See README for idempotent rerun and CHRIS_DEVSTRAP_FORCE_SSH_SETUP."
   chris_manual_todo "Run ./bootstrap.sh without --dry-run for GitHub SSH + origin when you are ready."
 elif _should_run_git_ssh_setup; then
   bash "$ROOT/scripts/git-ssh-setup.sh"
 else
-  step_info "Skipping GitHub SSH setup: .git present and origin already matches CHRIS_DEVSTRAP_GIT_SSH_URL. To force: CHRIS_DEVSTRAP_FORCE_SSH_SETUP=1 ./bootstrap.sh"
+  step_info "Skipping GitHub SSH setup: .git present and origin already matches CHRIS_DEVSTRAP_GIT_SSH_URL."
+  step_info "To force re-run: CHRIS_DEVSTRAP_FORCE_SSH_SETUP=1 ./bootstrap.sh"
 fi
+
+bash "$ROOT/scripts/iterm.sh"
+
+if [[ ! -f "${HOME}/.ssh/id_ed25519" ]] && [[ ! -f "${HOME}/.ssh/id_ed25519.pub" ]]; then
+  chris_manual_todo "Primary GitHub account: run ./scripts/github-account-add.sh for ~/.ssh/id_ed25519 as your default git@github.com identity."
+fi
+
+chris_print_manual_todos
+
+step_progress "$CHRIS_DEVSTRAP_BOOT_STEPS" "$CHRIS_DEVSTRAP_BOOT_STEPS" "Heavy installs (Xcode via mas, Android Studio) — runs last so long downloads do not block earlier setup"
+bash "$ROOT/scripts/heavy-installs.sh"
 
 hr
 banner "Bootstrap complete"
 _elapsed_sec=$(( $(date +%s) - CHRIS_DEVSTRAP_BOOT_START_SEC ))
 step_info "Bootstrap wall time: ${_elapsed_sec}s"
 step_ok "Open a new terminal (or run: exec zsh) and review README.md for manual steps."
-
-bash "$ROOT/scripts/iterm.sh"
-
-chris_print_manual_todos

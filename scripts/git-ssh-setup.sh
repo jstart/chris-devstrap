@@ -2,12 +2,15 @@
 # GitHub SSH + git origin for this repo (see README: CHRIS_DEVSTRAP_GIT_SSH_URL, SKIP_SSH, FORCE_SSH_SETUP).
 set -euo pipefail
 
-GIT_SSH_URL="${CHRIS_DEVSTRAP_GIT_SSH_URL:-git@github.com:jstart/chris-devstrap.git}"
 DEDICATED_KEY="${HOME}/.ssh/id_ed25519_chrisdevstrap"
 PUB_KEY="${DEDICATED_KEY}.pub"
 
 # shellcheck source=lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+# shellcheck source=ssh-config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ssh-config.sh"
+
+GIT_SSH_URL="$(chris_ssh_compute_git_ssh_url "$DEDICATED_KEY")"
 
 # Full TTY, or stdin TTY + bootstrap saved interactive (stdout may be piped to tee from bootstrap).
 _interactive_context_ok() {
@@ -36,10 +39,22 @@ _ensure_github_ssh_config() {
   local cfg="${HOME}/.ssh/config"
   mkdir -p "${HOME}/.ssh"
   chmod 700 "${HOME}/.ssh" 2>/dev/null || true
-  if [[ -f "$cfg" ]] && grep -qF "chris-devstrap: github.com" "$cfg" 2>/dev/null; then
-    step_info "SSH config already contains chris-devstrap github.com block (~/.ssh/config)"
+
+  # If the chris-devstrap key is already configured under ANY host alias (default github.com
+  # or a demoted alias like github.com-jstart from scripts/github-account-add.sh), don't add a
+  # duplicate block that would fight the new primary.
+  local existing_host
+  existing_host="$(chris_ssh_config_host_for_identity_file "$DEDICATED_KEY" 2>/dev/null || true)"
+  if [[ -n "$existing_host" ]]; then
+    step_info "SSH config already routes ${DEDICATED_KEY} via 'Host ${existing_host}' (~/.ssh/config)."
     return 0
   fi
+
+  if [[ -f "$cfg" ]] && grep -qF "chris-devstrap: github.com" "$cfg" 2>/dev/null; then
+    step_info "SSH config already contains a chris-devstrap managed block (~/.ssh/config)."
+    return 0
+  fi
+
   {
     echo ""
     echo "# chris-devstrap: github.com (managed block — safe to delete)"
@@ -54,10 +69,18 @@ _ensure_github_ssh_config() {
 }
 
 _verify_github_ssh() {
-  step_start "Testing GitHub SSH (ssh -T git@github.com)"
+  # Talk to the Host alias the chris-devstrap key is actually routed under, so a demoted alias
+  # like github.com-jstart is exercised (and gets host-key accepted) instead of the new primary.
+  local target_host="github.com"
+  local dedicated_host
+  dedicated_host="$(chris_ssh_config_host_for_identity_file "$DEDICATED_KEY" 2>/dev/null || true)"
+  if [[ -n "$dedicated_host" ]]; then
+    target_host="$dedicated_host"
+  fi
+  step_start "Testing GitHub SSH (ssh -T git@${target_host})"
   set +e
   # accept-new: add github.com host key without interactive prompt; BatchMode: no password prompts.
-  ssh_report="$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1)"
+  ssh_report="$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T "git@${target_host}" 2>&1)"
   ssh_code=$?
   set -e
 

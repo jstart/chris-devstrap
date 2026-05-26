@@ -71,6 +71,23 @@ chris_manual_todo() {
   printf '%s\n' "$msg" >>"$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE"
 }
 
+# Queue a title plus indented continuation lines (folded into one guided step).
+chris_manual_todo_block() {
+  [[ $# -lt 1 ]] && return 0
+  chris_manual_todo "$1"
+  shift
+  local line
+  for line in "$@"; do
+    chris_manual_todo "$line"
+  done
+}
+
+# Shared re-run command for Brewfile.heavy failures / skips.
+chris_heavy_install_manual_msg() {
+  local heavy_file="${1:-${CHRIS_DEVSTRAP_ROOT}/Brewfile.heavy}"
+  printf 'Heavy installs deferred. After signing into Apple ID + Mac App Store, run: brew bundle install --no-upgrade --file=%s' "$heavy_file"
+}
+
 # Print queued manual steps. When interactive (TTY bootstrap, not dry-run), walks the user
 # through each line and waits for Enter on /dev/tty before the next (done or skipped for now).
 # Opt out: CHRIS_DEVSTRAP_SKIP_MANUAL_GUIDE=1 (prints the same list as before, no pauses).
@@ -86,11 +103,21 @@ chris_print_manual_todos() {
     use_guide=0
   fi
 
+  # Fold indented continuation lines into the previous item so a single logical
+  # follow-up (e.g. "iTerm2 → Natural Text Editing:" with sub-bullets) is one
+  # checklist step instead of N. Continuation = leading whitespace.
   local -a items=()
+  local cur=""
   while IFS= read -r line || [[ -n "${line:-}" ]]; do
     [[ -z "${line// }" ]] && continue
-    items+=("$line")
+    if [[ -n "$cur" && "$line" =~ ^[[:space:]] ]]; then
+      cur+=$'\n'"$line"
+      continue
+    fi
+    [[ -n "$cur" ]] && items+=("$cur")
+    cur="$line"
   done <"$tmp"
+  [[ -n "$cur" ]] && items+=("$cur")
   rm -f "$tmp"
 
   local n="${#items[@]}"

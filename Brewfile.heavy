@@ -1,0 +1,12 @@
+# chris-devstrap — heavy / interactive installs (deferred to the final bootstrap step).
+# These can total ~15 GB and require an Apple ID + signed-in Mac App Store.
+# bootstrap.sh waits for Enter confirmation that you are signed in, then runs:
+#   brew bundle install --no-upgrade --file=Brewfile.heavy
+#
+# Apply manually:  brew bundle install --no-upgrade --file=Brewfile.heavy
+# Skip for a run: CHRIS_DEVSTRAP_SKIP_HEAVY=1 ./bootstrap.sh
+# Skip the Enter-to-continue prompt (assumes you are already signed in):
+#                 CHRIS_DEVSTRAP_HEAVY_NONINTERACTIVE=1 ./bootstrap.sh
+
+mas "Xcode", id: 497799835 unless File.exist?("/Applications/Xcode.app")
+cask "android-studio" unless File.exist?("/Applications/Android Studio.app")

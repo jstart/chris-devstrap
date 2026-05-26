@@ -31,6 +31,11 @@ _main() {
   brew bundle install --no-upgrade --file="$CHRIS_DEVSTRAP_ROOT/Brewfile"
   chris_brew_bundle_dev_maybe
 
+  if [[ "${CHRIS_DEVSTRAP_INCLUDE_HEAVY:-0}" == "1" ]] && [[ -f "${CHRIS_DEVSTRAP_ROOT}/Brewfile.heavy" ]]; then
+    step_start "brew bundle install — Brewfile.heavy (--no-upgrade)"
+    brew bundle install --no-upgrade --file="${CHRIS_DEVSTRAP_ROOT}/Brewfile.heavy"
+  fi
+
   if [[ "${CHRIS_DEVSTRAP_CLEANUP:-0}" == "1" ]]; then
     step_start "brew cleanup (CHRIS_DEVSTRAP_CLEANUP=1)"
     brew cleanup

@@ -20,5 +20,5 @@ alwaysApply: false
 - Prefer `chris_run` for side effects that should honor `CHRIS_DEVSTRAP_DRY_RUN=1` (set by `./bootstrap.sh --dry-run`). Do not duplicate dry-run print logic.
 - Homebrew: use `brew bundle install --no-upgrade --file=…` / `brew bundle check --no-upgrade`. Do **not** use deprecated `brew bundle --no-lock`.
 - Dock: `scripts/dock.sh` uses `config/dock-remove.txt` and `config/dock-add.tsv`; `dockutil --remove all` first, then adds **`~/Downloads`** as **others** / **fan** / **`datemodified`** unless you intentionally change that contract.
-- Bootstrap step order lives in `bootstrap.sh` (`step_progress` 1–9); keep README and user-facing messaging aligned when adding or reordering steps.
+- Bootstrap step order lives in `bootstrap.sh` (`CHRIS_DEVSTRAP_BOOT_STEPS`, currently 10); keep README and user-facing messaging aligned when adding or reordering steps.
 - Prefer small, focused diffs; avoid unrelated refactors and extra docs the user did not ask for.

@@ -3,19 +3,12 @@ set -euo pipefail
 
 # shellcheck source=lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+# shellcheck source=clt.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/clt.sh"
 
-step_start "Xcode Command Line Tools"
-if ! xcode-select -p &>/dev/null; then
-  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
-    step_warn "Would run xcode-select --install (GUI) — install CLT, then re-run bootstrap."
-    exit 1
-  fi
-  step_info "Installing Command Line Tools (GUI prompt may appear)..."
-  xcode-select --install || true
-  step_warn "Wait for CLT install to finish, then re-run bootstrap.sh"
-  exit 1
-fi
-step_ok "Command Line Tools present"
+export CHRIS_DEVSTRAP_CLT_CONTEXT=bootstrap
+chris_clt_require
+chris_clt_require_git
 
 step_start "Homebrew"
 if ! chris_brew_prefix_path &>/dev/null; then

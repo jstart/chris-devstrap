@@ -6,6 +6,13 @@ set -euo pipefail
 # shellcheck source=lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
+chris_xcode_manual_todos() {
+  chris_manual_todo_block "Xcode (after install):" \
+    "  sudo xcodebuild -license accept when prompted" \
+    "  Settings → Text Editing → download predictive completion when offered" \
+    "  Settings → Components → iOS Simulator runtime if CLI download failed"
+}
+
 if [[ "$(uname -s 2>/dev/null || true)" != "Darwin" ]]; then
   step_info "Skipping Xcode components: not macOS."
   exit 0
@@ -72,5 +79,5 @@ if ! "$CHRIS_XCODEBUILD" -downloadPlatform iOS; then
   step_warn "xcodebuild -downloadPlatform iOS failed — install/update the iOS Simulator runtime under Xcode → Settings → Components (or Platforms)."
 fi
 
-chris_manual_todo "Xcode predictive code completion model: Xcode → Settings → Text Editing (download in UI when offered; no stable CLI)."
+chris_xcode_manual_todos
 step_ok "Xcode components step finished (warnings above are non-fatal)."

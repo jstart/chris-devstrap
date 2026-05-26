@@ -32,4 +32,11 @@ else
   killall SystemUIServer cfprefsd 2>/dev/null || true
 fi
 
-chris_manual_todo "Raycast — General → Hotkey → ⌘Space · AI → off (global switch) · Extensions → disable rows you do not need · Window Management: Left ⌘⌃← / Right ⌘⌃→ / Maximize ⌘⌃Space · Clipboard History ⌘⇧C · System Settings → Privacy & Security → Accessibility (+ Screen Recording if asked). (UI sounds: bootstrap defaults silence them unless CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=0.)"
+chris_manual_todo_block "Raycast setup:" \
+  "  General → Hotkey → ⌘Space" \
+  "  AI → off (global switch)" \
+  "  Extensions → disable rows you do not need" \
+  "  Window Management: Left ⌘⌃← / Right ⌘⌃→ / Maximize ⌘⌃Space" \
+  "  Clipboard History ⌘⇧C" \
+  "  System Settings → Privacy & Security → Accessibility (+ Screen Recording if asked)" \
+  "  UI sounds: silenced by bootstrap unless CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=0"

@@ -46,13 +46,13 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 
 | Command | What it does |
 |--------|----------------|
-| `./bootstrap.sh` | Full bootstrap: **9** ordered steps (brew → bundle → zsh + git-config → macOS defaults → Xcode components (if full Xcode) → Finder sidebar → Dock → Raycast hotkey prep → SSH/origin when needed). Idempotent for most steps. Prints **wall time** at the end. |
+| `./bootstrap.sh` | Full bootstrap: **10** ordered steps (brew → bundle → zsh + git-config → macOS defaults → Xcode components (if full Xcode) → Finder sidebar → Dock → Raycast hotkey prep → SSH/origin when needed → **heavy installs (Xcode via mas + Android Studio; deferred so the long downloads run last and never block earlier setup)**). Idempotent for most steps. Prints **wall time** at the end. |
 | `./bootstrap.sh rerun` | Same as no subcommand. |
 | `./bootstrap.sh --dry-run` | Prints planned `defaults` / `dockutil` / etc. via `chris_run`; skips `brew bundle install` and SSH setup. Exits `0` early if brew is still missing (preview only). |
 | `./bootstrap.sh --verbose` | Same as full bootstrap with `set -x` (shell trace) after helpers load. Combine with other flags as needed. |
 | `./bootstrap.sh doctor` | Runs `brew doctor` (non-fatal, if brew is on PATH), then the same checks as **healthcheck**. |
 | `./bootstrap.sh healthcheck` | Runs `scripts/healthcheck.sh` (macOS-only checks; see exit policy below). |
-| `./bootstrap.sh update` | Runs `scripts/update.sh`: `brew update`, `brew upgrade`, then `brew bundle install --no-upgrade` for `Brewfile` (and for `Brewfile.dev` when that file exists, unless `CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1`). Optional `brew cleanup` when `CHRIS_DEVSTRAP_CLEANUP=1`. |
+| `./bootstrap.sh update` | Runs `scripts/update.sh`: `brew update`, `brew upgrade`, then `brew bundle install --no-upgrade` for `Brewfile` (and for `Brewfile.dev` when that file exists, unless `CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1`). Optional `brew cleanup` when `CHRIS_DEVSTRAP_CLEANUP=1`. Does **not** install `Brewfile.heavy` unless `CHRIS_DEVSTRAP_INCLUDE_HEAVY=1`. |
 
 
 **Environment (common):**
@@ -73,10 +73,16 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | `CHRIS_DEVSTRAP_SKIP_ITERM_REUSE_DIRECTORY=1` | Skip patching iTerm2's plist for **Initial directory → Reuse previous session** (`scripts/iterm.sh`). |
 | `CHRIS_DEVSTRAP_SKIP_DEFAULT_BROWSER=1` | Skip the default-browser step in `macos-defaults.sh`. |
 | `CHRIS_DEVSTRAP_SKIP_HEADSHOT=1` | Skip `scripts/headshot.sh` (no `Downloads` copy / no `dscl` user picture). |
+| `CHRIS_DEVSTRAP_FORCE_HEADSHOT=1` | Overwrite the local user picture in `scripts/headshot.sh` even when one is already set. Without it, headshot copies to `~/Downloads/headshot.png` but skips the `sudo dscl` mutation when an avatar is already configured. |
+| `CHRIS_DEVSTRAP_WAIT_CLT=1` | After `xcode-select --install`, poll until CLT finishes instead of exit-and-re-run. **Default on** for interactive `install.sh` one-liner (TTY); **default off** for `./bootstrap.sh` / piped runs. |
+| `CHRIS_DEVSTRAP_INCLUDE_HEAVY=1` | With `./bootstrap.sh update`, also run `brew bundle install --no-upgrade --file=Brewfile.heavy`. |
+| `CHRIS_DEVSTRAP_SKIP_HEAVY=1` | Skip the **heavy installs** step (`scripts/heavy-installs.sh`, last bootstrap step). Queues a manual_todo with the exact `brew bundle install --no-upgrade --file=Brewfile.heavy` command. |
+| `CHRIS_DEVSTRAP_HEAVY_NONINTERACTIVE=1` | Skip the Enter prompt before heavy downloads (assumes Apple ID + Mac App Store sign-in was completed during the guided checklist). |
 | `CHRIS_DEVSTRAP_DEFAULT_BROWSER` | First argument to `defaultbrowser` when Chrome is installed (default `chrome`). |
-| `CHRIS_DEVSTRAP_GIT_SSH_URL` | Desired SSH `origin` (default `git@github.com:jstart/chris-devstrap.git`). |
+| `CHRIS_DEVSTRAP_GIT_SSH_URL` | Desired SSH `origin`. When unset, `git-ssh-setup.sh` parses `~/.ssh/config` for whichever Host alias routes `~/.ssh/id_ed25519_chrisdevstrap` and defaults to `git@<that-alias>:jstart/chris-devstrap.git`; falls back to `git@github.com:jstart/chris-devstrap.git`. |
 | `CHRIS_DEVSTRAP_SKIP_SSH=1` | Skip `git-ssh-setup.sh` (automation). |
 | `CHRIS_DEVSTRAP_FORCE_SSH_SETUP=1` | Always run SSH wizard from bootstrap (disables fast path in `git-ssh-setup.sh`). |
+| `GH_LABEL`, `GH_USERNAME`, `GH_EMAIL`, `GH_IS_PRIMARY`, `GH_DEMOTE_ALIAS` | Inputs for `scripts/github-account-add.sh` (see "Multiple GitHub accounts"). When set, the matching prompt is skipped. |
 | `HOMEBREW_BUNDLE_NO_UPGRADE=1` | Same “no upgrade on bundle” behavior as `brew bundle install --no-upgrade` (see `brew bundle install --help`). |
 | `HOMEBREW_BUNDLE_BREW_SKIP` / `_CASK_SKIP` / `_MAS_SKIP` / `_TAP_SKIP` | Space-separated tokens to skip for this run (also honored by update). |
 
@@ -93,36 +99,61 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 
 | Area | Script / files |
 |------|----------------|
-| Homebrew + CLT + `~/.zprofile` shellenv | `scripts/brew.sh` |
+| Homebrew + CLT + `~/.zprofile` shellenv | [`install.sh`](install.sh) gates clone on CLT via [`scripts/clt.sh`](scripts/clt.sh); [`scripts/brew.sh`](scripts/brew.sh) runs CLT then Homebrew |
 | Bundle | `Brewfile` (+ `Brewfile.dev` when present unless `CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1`); for **`mas install`**, sign into the Mac App Store in the UI first (see **Mac App Store** above). |
 | Zsh / Oh My Zsh + snippet | `scripts/zsh.sh`, `templates/zshrc.snippet`, `templates/zsh-aliases.snippet` (git/shell shortcuts appended if missing) |
 | Global Git defaults (no user.name) | `scripts/git-config.sh` |
 | Finder (new window **Downloads**, column view, **date-modified** sort defaults + PlistBuddy best effort); Desktop & Dock window prefs; trackpad (**tap to click** + firm press / Force Click off); screenshots; **Control Center → Sound → Always Show** in menu bar (`ByHost` plist `Sound` = `18`); default browser (`defaultbrowser` when installed); hot corners; hide desktop widgets; global **`NSNavLastRootDirectory`** hint for some open/save sheets | `scripts/macos-defaults.sh` (UI sounds **off** by default unless `CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=0`) |
 | Headshot → **`~/Downloads/headshot.png`** + macOS **local user** login picture (`dscl`, needs **`assets/headshot.png`** in the repo) | `scripts/headshot.sh` (see [`assets/README.md`](assets/README.md)) |
-| Xcode first launch + iOS Simulator download | `scripts/xcode-components.sh` (skipped without full Xcode / on dry-run; errors are warnings) |
+| Xcode first launch + iOS Simulator download | `scripts/xcode-components.sh` when Xcode was present at bootstrap start, or chained after successful `heavy-installs.sh` |
 | `~/Developer` layout + sidebar | `scripts/finder-sidebar.sh` — downloads official **sbedit** `.pkg` when missing (`sudo installer`), then pins **Developer** + **Downloads** |
 | Dock | `scripts/dock.sh` — `defaults` for autohide + **tilesize / largesize 128**; `dockutil --remove all`, `config/dock-remove.txt`, `config/dock-add.tsv`; **`~/Downloads`** fan (**others**, date modified); `killall Dock` |
 | Raycast / Spotlight | `scripts/raycast-hotkey.sh` |
-| GitHub SSH + `origin` | `scripts/git-ssh-setup.sh` (end of bootstrap when criteria match) |
+| GitHub SSH + `origin` | `scripts/git-ssh-setup.sh` (end of bootstrap when criteria match) — alias-aware via `~/.ssh/config` parsing; coexists with `scripts/github-account-add.sh` demoted blocks. |
+| Add a GitHub SSH identity (primary or alias) | `scripts/github-account-add.sh` (interactive `/dev/tty`; not auto-invoked by `./bootstrap.sh` — run on demand). See **Multiple GitHub accounts** below. |
 | Raycast / Cursor / iTerm + iTerm prefs | `scripts/iterm.sh` — sets iTerm2 **Custom Directory** = **Recycle** (reuse previous session) on all **New Bookmarks** profiles when `com.googlecode.iterm2.plist` exists; opens apps when present; iTerm keybinding hints in manual todos |
+| Heavy installs (Xcode via `mas`, Android Studio) | `scripts/heavy-installs.sh` — last step; Apple ID + App Store sign-in is in the guided checklist (queued after brew bundle). Enter to start downloads or `s` to skip; chains `xcode-components.sh` when Xcode installs. |
 
 
 ## Manual steps
 
-### Google Chrome — profile for **[cleetruman@gmail.com](mailto:cleetruman@gmail.com)**
+Most setup is covered by the **guided checklist** at the end of `./bootstrap.sh` (iTerm, Raycast, Git identity, Apple ID + App Store, Xcode after install). Personal-only items live in [`templates/manual-overrides.example.md`](templates/manual-overrides.example.md).
 
-Open Chrome → profile menu → Add / Sign in → complete sign-in for that account; optional profile name/avatar.
+- **Cursor** — Sign in with Google (when the app opens at end of bootstrap).
+- **Primary GitHub account** — If you need a personal default `git@github.com` identity, run `./scripts/github-account-add.sh` (see **Multiple GitHub accounts** below). Bootstrap still configures the dedicated chris-devstrap repo key via `git-ssh-setup.sh`.
 
-### Apple ID / iCloud — Calendar + Contacts (example)
+### Multiple GitHub accounts (primary + aliases)
 
-**System Settings → Apple ID → iCloud:** enable what you want (e.g. Calendars, Contacts); turn off Mail/Notes/iCloud Drive if you do not want them. Mirror on iPhone if needed.
+`scripts/github-account-add.sh` (interactive — reads from `/dev/tty`) wires a new GitHub SSH identity into `~/.ssh/config`:
 
-### Other apps
+| Mode | Key path | `~/.ssh/config` host | Remote URL form |
+| ---- | -------- | -------------------- | --------------- |
+| Primary | `~/.ssh/id_ed25519` | `Host github.com` | `git@github.com:owner/repo.git` |
+| Aliased | `~/.ssh/id_ed25519_<label>` | `Host github.com-<label>` | `git@github.com-<label>:owner/repo.git` |
 
-- **Cursor** — Sign in with Google.
-- **iTerm2** — **Settings (⌘,)** → **Profiles** → your profile → **Keys** → **Key Bindings** → **Presets…** → **Natural Text Editing** (repeat per profile if you use more than one).
-- **Raycast** — End-of-bootstrap checklist groups hotkey, AI, extensions, window management, clipboard, and permissions in one step (`scripts/raycast-hotkey.sh`). Root hotkey **⌘Space** needs Spotlight freed first where possible. **Screenshot/UI sounds:** silenced by default via **`CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS`** (`0` to keep sounds).
-- **Xcode** — Install from App Store or `mas`; `sudo xcodebuild -license accept` when prompted. Simulator runtimes and predictive completion: use **Xcode → Settings → Components / Text Editing** (Apple has no stable headless flow for all optional downloads).
+When you promote a **new** account to primary and an existing managed `Host github.com` block already points at a different key, the script:
+
+1. Renames the existing block to `Host github.com-jstart` (override with `GH_DEMOTE_ALIAS`).
+2. Rewrites this repo's `origin` from `git@github.com:jstart/chris-devstrap.git` to `git@github.com-jstart:jstart/chris-devstrap.git`, so chris-devstrap keeps authenticating under its dedicated key.
+3. Adds a new managed `Host github.com` block for the new primary key.
+
+The bootstrap-time SSH step (`scripts/git-ssh-setup.sh`) is alias-aware: it parses `~/.ssh/config` for whichever `Host` line points at `~/.ssh/id_ed25519_chrisdevstrap`, defaults `CHRIS_DEVSTRAP_GIT_SSH_URL` to `git@<that-host>:jstart/chris-devstrap.git`, and skips adding a duplicate `Host github.com` block. Re-running `./bootstrap.sh` after demotion is safe.
+
+```bash
+# Primary account (new, default github.com identity):
+./scripts/github-account-add.sh    # then answer Y at "Set this account as primary"
+
+# Or non-interactive (CI / scripted):
+GH_LABEL=personal GH_USERNAME=alice GH_EMAIL=alice@example.com GH_IS_PRIMARY=1 \
+  ./scripts/github-account-add.sh
+
+# Additional aliased account, e.g. work:
+GH_LABEL=work GH_USERNAME=alice-corp GH_EMAIL=alice@corp.example GH_IS_PRIMARY=0 \
+  ./scripts/github-account-add.sh
+# → Use git@github.com-work:org/repo.git as the remote URL for those repos.
+```
+
+The script ssh-adds via `--apple-use-keychain` when available, copies the public key to the clipboard, opens `https://github.com/settings/keys`, waits for Enter, then runs `ssh -T git@<host-alias>` and looks for `Hi <username>` to confirm the right account picked it up.
 
 ### Microphone, camera, screen recording
 
@@ -130,11 +161,13 @@ macOS TCC cannot be granted from this repo. Use each app once, then **System Set
 
 ## Troubleshooting
 
-- **Appearance still light** — `defaults write … AppleInterfaceStyle` can lag until **System Settings → Appearance → Dark** is toggled once, a **full logout/login**, or **Apple Intelligence / accent** quirks on newer macOS; bootstrap also restarts Finder afterward.
+- **Appearance still light** — Bootstrap now flips dark mode via **osascript** (System Events) first, then writes `defaults` as a fallback. The first run may prompt for **Automation** permission (System Settings → Privacy & Security → Automation → your terminal → System Events) — grant it once and future runs flip dark mode silently. If you cancel that prompt, the `defaults` write still applies but you may need to toggle **System Settings → Appearance → Dark** once (or log out/in).
+- **`install.sh` one-liner — `xcode-select: No developer tools were found`** — Fresh Macs ship `/usr/bin/git` as an Apple stub that triggers the CLT installer when run. `install.sh` now checks `xcode-select -p` **before** cloning, fires `xcode-select --install` (GUI), and exits cleanly with the exact re-run command — wait for the CLT dialog to finish (~5–10 min), then re-run the curl one-liner.
 - **Desktop & Dock → Windows** — Bootstrap sets `AppleWindowTabbingMode`, `NSCloseAlwaysConfirmsChanges`, and `NSQuitAlwaysKeepsWindows` on `NSGlobalDomain`, plus `StandardHideWidgets` on `com.apple.WindowManager` (hide desktop widgets). **System Settings** may show stale labels until that pane is reopened; per-app behavior can require **quitting the app** (some cache). Logout is rarely needed; bootstrap already `killall`s Finder, SystemUIServer, and Dock.
 - **Trackpad → tap to click** — `macos-defaults.sh` sets built-in + Bluetooth `Clicking` and `com.apple.mouse.tapBehavior` (`1` = tap to click). If **System Settings → Trackpad** still shows it off, close that pane and reopen, or log out/in (same pattern as other `defaults` UI lag).
 - **File dialogs / column sort** — Bootstrap sets **Finder** new windows to **`~/Downloads`**, prefers **column view**, and writes **date-modified** sort/arrange defaults plus best-effort **PlistBuddy** patches. **Every app’s** open/save sheet still remembers its own last folder unless the app respects **`NSNavLastRootDirectory`**; there is no Apple-documented global “always Downloads” for all apps. Stale **`.DS_Store`** files can keep old sort—remove them or **Finder → View → Show View Options → Use as Defaults** on a representative folder.
-- **Headshot / user picture** — Add your photo as **`assets/headshot.png`** in the repo, then re-run bootstrap. **`dscl`** may require **sudo** and can fail on some builds; use **System Settings → Users & Groups** and drag **`~/Downloads/headshot.png`** onto your avatar. **Apple ID, Chrome, Messages,** etc. do not share one API—use **`assets/README.md`** and the end-of-bootstrap **Manual follow-ups** lines for those.
+- **Headshot / user picture** — Add your photo as **`assets/headshot.png`** in the repo, then re-run bootstrap. Bootstrap **skips the `sudo dscl` Picture update when the local user already has an avatar set** (checks `dscl . -read Picture` / `JPEGPhoto`); set **`CHRIS_DEVSTRAP_FORCE_HEADSHOT=1`** to overwrite. **`dscl`** may require **sudo** and can fail on some builds; use **System Settings → Users & Groups** and drag **`~/Downloads/headshot.png`** onto your avatar. **Apple ID, Chrome, Messages,** etc. do not share one API—use **`assets/README.md`** and the end-of-bootstrap **Manual follow-ups** lines for those.
+- **Heavy installs (Xcode / Android Studio) did not run** — Sign in via the checklist item queued after brew bundle, then press Enter at step 10 (or type `s` to skip). Re-run: `brew bundle install --no-upgrade --file=Brewfile.heavy`. Xcode first-launch runs automatically after a successful heavy install when Xcode appears.
 - **`brew` not in new terminals** — Ensure `~/.zprofile` contains the brew shellenv block from `scripts/brew.sh`.
 - **`~/.zshrc`: `command not found: history-substring-search` / parse error near `)`** — Usually a broken multiline `plugins=(` … `)` block. A common leftover is `plugins=(git)` followed by bare `git` and `)` (running `git` with no args prints the usage banner). **`scripts/zsh.sh`** merges multiline `plugins` and **sanitizes** orphan lines. Re-run **`bash scripts/zsh.sh`** or fix by hand: one valid `plugins=(…)` line and no stray plugin lines.
 - **Opening a terminal prints `git` usage** — Follow-on from a broken **`~/.zshrc`**; fix **`plugins=`** then `exec zsh`.
