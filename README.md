@@ -87,7 +87,7 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | `HOMEBREW_BUNDLE_BREW_SKIP` / `_CASK_SKIP` / `_MAS_SKIP` / `_TAP_SKIP` | Space-separated tokens to skip for this run (also honored by update). |
 
 
-**`brew bundle`:** This repo uses `brew bundle install --no-upgrade --file=…` (not deprecated `--no-lock`; Homebrew 5 removed `--no-lock`). `brew bundle check --no-upgrade` means “present,” not “latest” — use `./bootstrap.sh update` or `brew upgrade` when you want versions to move. The Brewfile includes **`gh`** (GitHub CLI) and **`jira-cli`** (Jira CLI; command **`jira`** — do not install **`go-jira`** alongside it).
+**`brew bundle`:** This repo uses `brew bundle check --no-upgrade` before `brew bundle install --no-upgrade --file=…` (via `chris_brew_bundle_if_needed` in `scripts/lib.sh`). On a **fresh Mac** the check fails and everything installs; on **re-runs** satisfied bundles are skipped. `check --no-upgrade` means “present,” not “latest” — use `./bootstrap.sh update` or `brew upgrade` when you want versions to move. The Brewfile includes **`gh`** (GitHub CLI) and **`jira-cli`** (Jira CLI; command **`jira`** — do not install **`go-jira`** alongside it).
 
 **Healthcheck / exit codes:** `./bootstrap.sh healthcheck` exits `1` on non-macOS, missing `brew`/`git`, bad CLT, failed `brew bundle check --no-upgrade` for `Brewfile` (and for `Brewfile.dev` when that file exists and `CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE` is not set), failed GitHub SSH or `dockutil` checks, or any failed check reported above. `brew doctor` is never fatal inside `healthcheck.sh`. `./scripts/git-ssh-setup.sh` exits `0` when skipped (`CHRIS_DEVSTRAP_SKIP_SSH`), on fast path (matching `origin` + working `ssh -T`), or after interactive success; `1` when a TTY is required but missing, SSH verification fails, or keys are missing.
 
@@ -109,10 +109,10 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | `~/Developer` layout + sidebar | `scripts/finder-sidebar.sh` — downloads official **sbedit** `.pkg` when missing (`sudo installer`), then pins **Developer** + **Downloads** |
 | Dock | `scripts/dock.sh` — `defaults` for autohide + **tilesize / largesize 128**; `dockutil --remove all`, `config/dock-remove.txt`, `config/dock-add.tsv`; **`~/Downloads`** fan (**others**, date modified); `killall Dock` |
 | Raycast / Spotlight | `scripts/raycast-hotkey.sh` |
-| GitHub SSH + `origin` | `scripts/git-ssh-setup.sh` (end of bootstrap when criteria match) — alias-aware via `~/.ssh/config` parsing; coexists with `scripts/github-account-add.sh` demoted blocks. |
+| GitHub SSH + `origin` | `scripts/git-ssh-setup.sh` (always invoked at end of bootstrap except `--dry-run`; fast-path skips when `origin` + `ssh -T` already pass) — alias-aware via `~/.ssh/config` parsing; coexists with `scripts/github-account-add.sh` demoted blocks. |
 | Add a GitHub SSH identity (primary or alias) | `scripts/github-account-add.sh` (interactive `/dev/tty`; not auto-invoked by `./bootstrap.sh` — run on demand). See **Multiple GitHub accounts** below. |
 | Raycast / Cursor / iTerm + iTerm prefs | `scripts/iterm.sh` — sets iTerm2 **Custom Directory** = **Recycle** (reuse previous session) on all **New Bookmarks** profiles when `com.googlecode.iterm2.plist` exists; opens apps when present; iTerm keybinding hints in manual todos |
-| Heavy installs (Xcode via `mas`, Android Studio) | `scripts/heavy-installs.sh` — last step; Apple ID + App Store sign-in is in the guided checklist (queued after brew bundle). Enter to start downloads or `s` to skip; chains `xcode-components.sh` when Xcode installs. |
+| Heavy installs (Xcode via `mas`, Android Studio) | `scripts/heavy-installs.sh` — last step; checks `Brewfile.heavy` first (skips downloads when satisfied). Apple ID + App Store sign-in is in the guided checklist (queued after brew bundle). Enter to start downloads or `s` to skip; chains `xcode-components.sh` when Xcode installs or is already present. |
 
 
 ## Manual steps

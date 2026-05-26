@@ -62,17 +62,16 @@ step_info "Reference: https://developer.apple.com/documentation/xcode/downloadin
 
 # Exits non-zero when first-launch work is still needed — not treated as a bootstrap failure.
 if "$CHRIS_XCODEBUILD" -checkFirstLaunchStatus; then
-  step_info "xcodebuild -checkFirstLaunchStatus: satisfied (exit 0)."
+  step_ok "xcodebuild -checkFirstLaunchStatus: satisfied — skipping -runFirstLaunch"
 else
   step_info "xcodebuild -checkFirstLaunchStatus: non-zero exit (first-launch work may be pending) — continuing with -runFirstLaunch."
-fi
+  if ! "$CHRIS_XCODEBUILD" -runFirstLaunch; then
+    step_warn "xcodebuild -runFirstLaunch failed (license, network, or disk). Try: sudo xcodebuild -license accept — then open Xcode once or re-run bootstrap."
+  fi
 
-if ! "$CHRIS_XCODEBUILD" -runFirstLaunch; then
-  step_warn "xcodebuild -runFirstLaunch failed (license, network, or disk). Try: sudo xcodebuild -license accept — then open Xcode once or re-run bootstrap."
-fi
-
-if ! "$CHRIS_XCODEBUILD" -runFirstLaunch -checkForNewerComponents; then
-  step_warn "xcodebuild -runFirstLaunch -checkForNewerComponents failed — optional between-release updates; try Xcode → Settings → Components."
+  if ! "$CHRIS_XCODEBUILD" -runFirstLaunch -checkForNewerComponents; then
+    step_warn "xcodebuild -runFirstLaunch -checkForNewerComponents failed — optional between-release updates; try Xcode → Settings → Components."
+  fi
 fi
 
 if ! "$CHRIS_XCODEBUILD" -downloadPlatform iOS; then

@@ -15,7 +15,7 @@ alwaysApply: false
   source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
   ```
 
-  `lib.sh` defines `CHRIS_DEVSTRAP_ROOT`, `CHRIS_DEVSTRAP_SCRIPTS_DIR`, `ROOT`, `chris_run`, `chris_eval_brew_shellenv`, `chris_brew_prefix_path`, `chris_brew_bundle_dev_maybe` (installs `Brewfile.dev` when present unless `CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1`), and pulls in `ui.sh`.
+  `lib.sh` defines `CHRIS_DEVSTRAP_ROOT`, `CHRIS_DEVSTRAP_SCRIPTS_DIR`, `ROOT`, `chris_run`, `chris_eval_brew_shellenv`, `chris_brew_prefix_path`, `chris_brew_bundle_if_needed` (check then install; skip when satisfied), `chris_brew_bundle_dev_maybe` (installs `Brewfile.dev` when present unless `CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1`), and pulls in `ui.sh`.
 
 - Prefer `chris_run` for side effects that should honor `CHRIS_DEVSTRAP_DRY_RUN=1` (set by `./bootstrap.sh --dry-run`). Do not duplicate dry-run print logic.
 - Homebrew: use `brew bundle install --no-upgrade --file=…` / `brew bundle check --no-upgrade`. Do **not** use deprecated `brew bundle --no-lock`.

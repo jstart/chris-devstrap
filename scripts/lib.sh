@@ -32,6 +32,27 @@ chris_eval_brew_shellenv() {
   eval "$("${p}/bin/brew" shellenv)"
 }
 
+# Run `brew bundle check --no-upgrade`; install only when something from the file is missing.
+# On a fresh Mac the check fails and install runs; on re-runs satisfied bundles are skipped.
+chris_brew_bundle_if_needed() {
+  local file="$1"
+  local label="${2:-$(basename "$file")}"
+
+  step_start "brew bundle check (--no-upgrade): ${label}"
+  if brew bundle check --no-upgrade --file="$file" --verbose; then
+    step_ok "${label} satisfied — nothing to install"
+    return 0
+  fi
+
+  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+    step_info "Dry-run: would run brew bundle install --no-upgrade --file=${file}"
+    return 0
+  fi
+
+  step_start "brew bundle install (--no-upgrade): ${label}"
+  brew bundle install --no-upgrade --file="$file"
+}
+
 # When Brewfile.dev exists in the repo, run brew bundle install for it unless opted out.
 # Opt out: CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1
 chris_brew_bundle_dev_maybe() {
@@ -41,8 +62,7 @@ chris_brew_bundle_dev_maybe() {
     step_info "Brewfile.dev skipped (CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1)"
     return 0
   fi
-  step_start "brew bundle install — Brewfile.dev (--no-upgrade)"
-  brew bundle install --no-upgrade --file="$dev_file"
+  chris_brew_bundle_if_needed "$dev_file" "Brewfile.dev"
 }
 
 # Run a command, or print it when CHRIS_DEVSTRAP_DRY_RUN=1 (bootstrap exports this).

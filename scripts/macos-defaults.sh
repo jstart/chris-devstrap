@@ -11,19 +11,26 @@ step_start "Dark mode + Finder"
 # osascript talks to the live appearance daemon so the menu bar / Finder flip immediately.
 # Falls back to `defaults` for fresh accounts where System Events is not yet wired up.
 _chris_darkmode_osa_failed=0
-if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
-  chris_run osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to true'
-elif ! osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to true' >/dev/null 2>&1; then
-  _chris_darkmode_osa_failed=1
-fi
-chris_run defaults write NSGlobalDomain AppleInterfaceStyle -string Dark || true
-chris_run defaults write -g AppleInterfaceStyle -string Dark || true
-step_info "Dark mode: osascript (live) + defaults (fallback). First run may prompt for Automation permission (System Settings → Privacy & Security → Automation → your terminal → System Events); grant it once and future runs flip dark mode silently."
-if [[ "$_chris_darkmode_osa_failed" == 1 ]]; then
-  step_warn "osascript dark-mode toggle failed (likely Automation permission). Defaults still written; menu bar may stay light until logout/login or until you grant Automation."
-  chris_manual_todo_block "Dark mode — grant Automation permission:" \
-    "  System Settings → Privacy & Security → Automation → your terminal → System Events" \
-    "  Re-run: osascript -e 'tell application \"System Events\" to tell appearance preferences to set dark mode to true'"
+_chris_interface_style_dark() {
+  [[ "$(defaults read NSGlobalDomain AppleInterfaceStyle 2>/dev/null || echo "")" == "Dark" ]]
+}
+if _chris_interface_style_dark; then
+  step_ok "Dark mode already enabled — skipping appearance toggle"
+else
+  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+    chris_run osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to true'
+  elif ! osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to true' >/dev/null 2>&1; then
+    _chris_darkmode_osa_failed=1
+  fi
+  chris_run defaults write NSGlobalDomain AppleInterfaceStyle -string Dark || true
+  chris_run defaults write -g AppleInterfaceStyle -string Dark || true
+  step_info "Dark mode: osascript (live) + defaults (fallback). First run may prompt for Automation permission (System Settings → Privacy & Security → Automation → your terminal → System Events); grant it once and future runs flip dark mode silently."
+  if [[ "$_chris_darkmode_osa_failed" == 1 ]]; then
+    step_warn "osascript dark-mode toggle failed (likely Automation permission). Defaults still written; menu bar may stay light until logout/login or until you grant Automation."
+    chris_manual_todo_block "Dark mode — grant Automation permission:" \
+      "  System Settings → Privacy & Security → Automation → your terminal → System Events" \
+      "  Re-run: osascript -e 'tell application \"System Events\" to tell appearance preferences to set dark mode to true'"
+  fi
 fi
 chris_run defaults write com.apple.finder FXPreferredViewStyle -string clmv || true
 chris_run defaults write com.apple.finder ShowRecentTags -bool false || true

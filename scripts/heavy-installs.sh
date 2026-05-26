@@ -34,7 +34,22 @@ step_info "Brewfile.heavy:"
 sed 's/^/  /' "$HEAVY_FILE"
 
 if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-0}" == "1" ]]; then
-  step_info "Dry-run: would prompt to start heavy downloads, then: brew bundle install --no-upgrade --file=$HEAVY_FILE"
+  step_start "brew bundle check (--no-upgrade): Brewfile.heavy"
+  if brew bundle check --no-upgrade --file="$HEAVY_FILE" --verbose; then
+    step_info "Dry-run: Brewfile.heavy satisfied — nothing to install."
+  else
+    step_info "Dry-run: would prompt to start heavy downloads, then: brew bundle install --no-upgrade --file=$HEAVY_FILE"
+  fi
+  exit 0
+fi
+
+step_start "brew bundle check (--no-upgrade): Brewfile.heavy"
+if brew bundle check --no-upgrade --file="$HEAVY_FILE" --verbose; then
+  step_ok "Brewfile.heavy satisfied — skipping heavy downloads"
+  if [[ -d "/Applications/Xcode.app" ]] || xcode-select -p 2>/dev/null | grep -Fq '.app/Contents/Developer'; then
+    step_info "Xcode present — running first-launch components if still needed…"
+    bash "${CHRIS_DEVSTRAP_SCRIPTS_DIR}/xcode-components.sh" || true
+  fi
   exit 0
 fi
 

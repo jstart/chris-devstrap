@@ -117,35 +117,6 @@ CHRIS_DEVSTRAP_MANUAL_TODOS_FILE="${TMPDIR:-/tmp}/chris-devstrap-manual-$$.txt"
 export CHRIS_DEVSTRAP_MANUAL_TODOS_FILE
 : >"$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE"
 
-_should_run_git_ssh_setup() {
-  local want="${CHRIS_DEVSTRAP_GIT_SSH_URL:-git@github.com:jstart/chris-devstrap.git}"
-
-  [[ "${CHRIS_DEVSTRAP_SKIP_SSH:-0}" == "1" ]] && return 1
-  [[ "${CHRIS_DEVSTRAP_FORCE_SSH_SETUP:-0}" == "1" ]] && return 0
-
-  if [[ ! -d "$ROOT/.git" ]]; then
-    return 0
-  fi
-
-  if ! git -C "$ROOT" remote get-url origin >/dev/null 2>&1; then
-    return 0
-  fi
-
-  local cur
-  cur="$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)"
-  [[ -z "$cur" ]] && return 0
-
-  if [[ "$cur" == "$want" ]]; then
-    return 1
-  fi
-
-  if [[ "$cur" == git@* ]] || [[ "$cur" == ssh://* ]]; then
-    return 0
-  fi
-
-  return 0
-}
-
 LOG_DIR="${HOME}/Library/Logs"
 LOG_FILE="${LOG_DIR}/chris-devstrap.log"
 mkdir -p "$LOG_DIR"
@@ -175,15 +146,10 @@ fi
 chris_devstrap_sudo_prime_and_keepalive
 
 step_progress 2 "$CHRIS_DEVSTRAP_BOOT_STEPS" "brew bundle (check + install)"
-step_start "brew bundle check (--no-upgrade: presence, not latest)"
-brew bundle check --no-upgrade --file="$ROOT/Brewfile" --verbose || true
-
+chris_brew_bundle_if_needed "$ROOT/Brewfile" "Brewfile"
 if [[ "$CHRIS_DEVSTRAP_DRY_RUN" == 1 ]]; then
-  step_info "Skipping brew bundle install in dry-run (run without --dry-run to apply)."
   chris_manual_todo "Re-run without --dry-run to apply brew bundle, defaults, Dock, and GitHub SSH."
 else
-  step_start "brew bundle install (--no-upgrade: install missing only)"
-  brew bundle install --no-upgrade --file="$ROOT/Brewfile"
   chris_brew_bundle_dev_maybe
 fi
 
@@ -222,14 +188,11 @@ bash "$ROOT/scripts/raycast-hotkey.sh"
 
 step_progress 9 "$CHRIS_DEVSTRAP_BOOT_STEPS" "GitHub SSH + git origin"
 if [[ "$CHRIS_DEVSTRAP_DRY_RUN" == 1 ]]; then
-  step_info "Dry-run: skipping GitHub SSH setup. Full runs invoke ./scripts/git-ssh-setup.sh when needed."
-  step_info "See README for idempotent rerun and CHRIS_DEVSTRAP_FORCE_SSH_SETUP."
+  step_info "Dry-run: skipping GitHub SSH setup. Full runs always invoke ./scripts/git-ssh-setup.sh (it skips when origin + ssh -T already pass)."
+  step_info "See README for CHRIS_DEVSTRAP_FORCE_SSH_SETUP."
   chris_manual_todo "Run ./bootstrap.sh without --dry-run for GitHub SSH + origin when you are ready."
-elif _should_run_git_ssh_setup; then
-  bash "$ROOT/scripts/git-ssh-setup.sh"
 else
-  step_info "Skipping GitHub SSH setup: .git present and origin already matches CHRIS_DEVSTRAP_GIT_SSH_URL."
-  step_info "To force re-run: CHRIS_DEVSTRAP_FORCE_SSH_SETUP=1 ./bootstrap.sh"
+  bash "$ROOT/scripts/git-ssh-setup.sh"
 fi
 
 bash "$ROOT/scripts/iterm.sh"
