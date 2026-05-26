@@ -78,34 +78,32 @@ _verify_github_ssh() {
     target_host="$dedicated_host"
   fi
   step_start "Testing GitHub SSH (ssh -T git@${target_host})"
-  set +e
-  # accept-new: add github.com host key without interactive prompt; BatchMode: no password prompts.
-  ssh_report="$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T "git@${target_host}" 2>&1)"
-  ssh_code=$?
-  set -e
+  local rc=0
+  chris_github_ssh_verify_batchmode "$target_host" || rc=$?
+  printf '%s\n' "$CHRIS_SSH_VERIFY_OUTPUT"
 
-  printf '%s\n' "$ssh_report"
-
-  if grep -qi 'Permission denied' <<<"$ssh_report"; then
-    step_warn "GitHub rejected the SSH key (Permission denied)."
-    return 1
-  fi
-  if [[ "$ssh_code" -eq 255 ]]; then
-    step_warn "ssh exited 255 — connection or host key problem."
-    return 1
-  fi
-  if grep -Eq 'successfully authenticated|Welcome to GitHub|^Hi ' <<<"$ssh_report"; then
-    step_ok "GitHub authenticated over SSH."
-    return 0
-  fi
-  # GitHub often exits 1 while printing success text.
-  if [[ "$ssh_code" -eq 1 ]] && grep -qi 'github\.com' <<<"$ssh_report" && ! grep -qi 'Permission denied' <<<"$ssh_report"; then
-    step_ok "GitHub SSH test returned exit ${ssh_code} (common when GitHub prints your username)."
-    return 0
-  fi
-
-  step_warn "Could not confirm GitHub SSH authentication (exit ${ssh_code})."
-  return 1
+  case "$rc" in
+    0)
+      if [[ "$CHRIS_SSH_VERIFY_CODE" -eq 1 ]]; then
+        step_ok "GitHub SSH OK (exit 1 + GitHub message — expected, per GitHub docs)."
+      else
+        step_ok "GitHub authenticated over SSH."
+      fi
+      return 0
+      ;;
+    2)
+      step_warn "GitHub rejected the SSH key (Permission denied)."
+      return 1
+      ;;
+    3)
+      step_warn "ssh exited 255 — connection or host key problem."
+      return 1
+      ;;
+    *)
+      step_warn "Could not confirm GitHub SSH authentication (exit ${CHRIS_SSH_VERIFY_CODE})."
+      return 1
+      ;;
+  esac
 }
 
 _config_remote() {
@@ -134,8 +132,22 @@ _config_remote() {
   _optional_fetch
 }
 
+# F4: skip fetch when origin was fetched recently (default: within last hour).
+# Override window with CHRIS_DEVSTRAP_FETCH_MAX_AGE_SEC; force with CHRIS_DEVSTRAP_FORCE_FETCH=1.
 _optional_fetch() {
   step_start "git fetch origin (best-effort)"
+  local fetch_head="${ROOT}/.git/FETCH_HEAD"
+  local max_age="${CHRIS_DEVSTRAP_FETCH_MAX_AGE_SEC:-3600}"
+  if [[ "${CHRIS_DEVSTRAP_FORCE_FETCH:-0}" != "1" ]] && [[ -f "$fetch_head" ]]; then
+    local now mtime age
+    now="$(date +%s)"
+    mtime="$(stat -f %m "$fetch_head" 2>/dev/null || stat -c %Y "$fetch_head" 2>/dev/null || echo 0)"
+    age=$((now - mtime))
+    if [[ "$age" -lt "$max_age" ]]; then
+      step_ok "fetch skipped — FETCH_HEAD is ${age}s old (< ${max_age}s; CHRIS_DEVSTRAP_FORCE_FETCH=1 to override)"
+      return 0
+    fi
+  fi
   set +e
   git fetch origin 2>/dev/null || true
   set -e

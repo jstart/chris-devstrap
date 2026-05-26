@@ -17,8 +17,14 @@ chris_devstrap_sudo_prime_and_keepalive() {
     return 0
   fi
 
-  step_info "sudo: enter your password once if prompted — bootstrap refreshes the sudo session in the background (~55s) so a long brew bundle or other sudo-using steps do not hit an expired credential mid-run."
-  sudo -v
+  # A10: skip the password prompt when sudo is already primed in this shell session.
+  # The keepalive still runs so a long brew bundle does not hit an expired credential.
+  if sudo -nv 2>/dev/null; then
+    step_info "sudo already primed — skipping password prompt, starting keepalive in the background (~55s)."
+  else
+    step_info "sudo: enter your password once if prompted — bootstrap refreshes the sudo session in the background (~55s) so a long brew bundle or other sudo-using steps do not hit an expired credential mid-run."
+    sudo -v
+  fi
 
   (
     while true; do

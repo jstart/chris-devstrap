@@ -7,10 +7,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
 CHRIS_DEVSTRAP_BOOT_STEPS=10
-CHRIS_DEVSTRAP_XCODE_AT_START=0
-if [[ -d "/Applications/Xcode.app" ]] || xcode-select -p 2>/dev/null | grep -Fq '.app/Contents/Developer'; then
-  CHRIS_DEVSTRAP_XCODE_AT_START=1
-fi
 
 CHRIS_DEVSTRAP_DRY_RUN=0
 SUBCOMMAND=""
@@ -46,7 +42,7 @@ EOF
 
 for arg in "$@"; do
   case "$arg" in
-    --dry-run) CHRIS_DEVSTRAP_DRY_RUN=1 ;;
+    --dry-run) export CHRIS_DEVSTRAP_DRY_RUN=1 ;;
     --verbose) export CHRIS_DEVSTRAP_VERBOSE=1 ;;
     -h | --help)
       _usage
@@ -69,10 +65,9 @@ done
 
 case "${SUBCOMMAND:-}" in
   doctor)
-    export CHRIS_DEVSTRAP_INTERACTIVE=0
-    [[ -t 1 ]] && export CHRIS_DEVSTRAP_INTERACTIVE=1
     # shellcheck source=scripts/lib.sh
     source "$ROOT/scripts/lib.sh"
+    chris_export_interactive_if_tty
     if [[ "${CHRIS_DEVSTRAP_VERBOSE:-0}" == "1" ]]; then
       set -x
     fi
@@ -101,12 +96,9 @@ export CHRIS_DEVSTRAP_DRY_RUN
 export CHRIS_DEVSTRAP_VERBOSE="${CHRIS_DEVSTRAP_VERBOSE:-0}"
 export CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS="${CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS:-1}"
 
-export CHRIS_DEVSTRAP_INTERACTIVE=0
-[[ -t 1 ]] && CHRIS_DEVSTRAP_INTERACTIVE=1
-export CHRIS_DEVSTRAP_INTERACTIVE
-
 # shellcheck source=scripts/lib.sh
 source "$ROOT/scripts/lib.sh"
+chris_export_interactive_if_tty
 if [[ "$CHRIS_DEVSTRAP_VERBOSE" == "1" ]]; then
   set -x
 fi
@@ -116,6 +108,11 @@ source "$ROOT/scripts/sudo-keepalive.sh"
 CHRIS_DEVSTRAP_MANUAL_TODOS_FILE="${TMPDIR:-/tmp}/chris-devstrap-manual-$$.txt"
 export CHRIS_DEVSTRAP_MANUAL_TODOS_FILE
 : >"$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE"
+
+CHRIS_DEVSTRAP_XCODE_AT_START=0
+if chris_xcode_app_installed; then
+  CHRIS_DEVSTRAP_XCODE_AT_START=1
+fi
 
 LOG_DIR="${HOME}/Library/Logs"
 LOG_FILE="${LOG_DIR}/chris-devstrap.log"
@@ -163,9 +160,10 @@ step_progress 3 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Zsh + Oh My Zsh"
 bash "$ROOT/scripts/zsh.sh"
 bash "$ROOT/scripts/git-config.sh"
 
-step_progress 4 "$CHRIS_DEVSTRAP_BOOT_STEPS" "macOS defaults (Finder, trackpad, screenshots, …)"
+step_progress 4 "$CHRIS_DEVSTRAP_BOOT_STEPS" "macOS defaults (Finder, trackpad, screenshots, …) + user picture"
 bash "$ROOT/scripts/macos-defaults.sh"
 
+# headshot is grouped under step 4 (also writes user-visible config); intentionally not its own numbered step.
 bash "$ROOT/scripts/headshot.sh"
 
 step_progress 5 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Xcode (first launch + iOS Simulator runtime)"

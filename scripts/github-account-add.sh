@@ -219,30 +219,32 @@ main() {
   fi
 
   step_start "Verifying ssh -T git@${host_alias}"
-  local out code
-  set +e
-  out="$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T "git@${host_alias}" 2>&1)"
-  code=$?
-  set -e
-  printf '%s\n' "$out"
+  local rc=0
+  chris_github_ssh_verify_batchmode "$host_alias" || rc=$?
+  printf '%s\n' "$CHRIS_SSH_VERIFY_OUTPUT"
 
-  if grep -qi 'Permission denied' <<<"$out"; then
-    step_warn "GitHub rejected the key — verify it was added to ${GH_USERNAME}'s account at https://github.com/settings/keys."
-    exit 1
-  fi
-  if [[ "$code" -eq 255 ]]; then
-    step_warn "ssh exited 255 — connection or host key problem."
-    exit 1
-  fi
-  if grep -Eq "^Hi ${GH_USERNAME}|successfully authenticated|Welcome to GitHub" <<<"$out"; then
-    step_ok "Authenticated as ${GH_USERNAME} via ${host_alias}."
-  elif [[ "$code" -eq 1 ]] && grep -qi 'github\.com' <<<"$out"; then
-    step_ok "ssh -T returned exit 1 with a GitHub message (common when GitHub prints your username)."
-    step_info "If the 'Hi <user>' line above doesn't match ${GH_USERNAME}, double-check the key was added to the right account."
-  else
-    step_warn "Could not confirm GitHub SSH authentication (exit ${code}). See the output above."
-    exit 1
-  fi
+  case "$rc" in
+    0)
+      if grep -Eq "^Hi ${GH_USERNAME}" <<<"$CHRIS_SSH_VERIFY_OUTPUT"; then
+        step_ok "Authenticated as ${GH_USERNAME} via ${host_alias}."
+      else
+        step_ok "GitHub SSH OK via ${host_alias}."
+        step_info "If the 'Hi <user>' line above doesn't match ${GH_USERNAME}, double-check the key was added to the right account."
+      fi
+      ;;
+    2)
+      step_warn "GitHub rejected the key — verify it was added to ${GH_USERNAME}'s account at https://github.com/settings/keys."
+      exit 1
+      ;;
+    3)
+      step_warn "ssh exited 255 — connection or host key problem."
+      exit 1
+      ;;
+    *)
+      step_warn "Could not confirm GitHub SSH authentication (exit ${CHRIS_SSH_VERIFY_CODE}). See the output above."
+      exit 1
+      ;;
+  esac
 
   hr
   step_ok "Configured: ${GH_USERNAME} → Host ${host_alias} → ${key}"

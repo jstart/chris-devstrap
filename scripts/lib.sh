@@ -32,6 +32,105 @@ chris_eval_brew_shellenv() {
   eval "$("${p}/bin/brew" shellenv)"
 }
 
+# True when /Applications/Xcode.app exists, OR active developer dir is an Xcode bundle
+# (xcode-select -p points inside .app/Contents/Developer). CLT-only Macs return false.
+chris_xcode_app_installed() {
+  [[ -d "/Applications/Xcode.app" ]] && return 0
+  local p
+  p="$(xcode-select -p 2>/dev/null || true)"
+  [[ -n "$p" && "$p" == *".app/Contents/Developer"* ]]
+}
+
+# Tracks whether any defaults_write_if_diff actually wrote in this script run.
+# Scripts set this to 0 at the start (or rely on the unset default of "0") and pass it
+# to chris_killall_if_changed to gate UI restarts.
+: "${CHRIS_DEVSTRAP_DEFAULTS_CHANGED:=0}"
+export CHRIS_DEVSTRAP_DEFAULTS_CHANGED
+
+# defaults read | normalize-to-string; "__MISSING__" sentinel for unset keys.
+_chris_defaults_read_normalized() {
+  local args=("$@") raw
+  if ! raw="$(defaults "${args[@]}" 2>/dev/null)"; then
+    printf '__MISSING__'
+    return 0
+  fi
+  # `defaults read` returns floats like "0.15" and ints like "1" / strings unquoted.
+  # Strip leading/trailing whitespace and trailing newline; leave the value as-is.
+  printf '%s' "${raw%$'\n'}"
+}
+
+# Compare current `defaults read` value to expected; write only if different.
+# Usage:
+#   chris_defaults_write_if_diff <domain> <key> <-type|--> <expected>
+#   chris_defaults_write_if_diff -currentHost <domain> <key> <-type|--> <expected>
+# Type tokens map to defaults: -string|-bool|-int|-float|-data|-array|-dict|--
+# Bools normalize to "0"/"1" before compare. Sets CHRIS_DEVSTRAP_DEFAULTS_CHANGED=1
+# whenever a write happens. Honors CHRIS_DEVSTRAP_DRY_RUN via chris_run.
+chris_defaults_write_if_diff() {
+  local prefix=""
+  if [[ "$1" == "-currentHost" || "$1" == "-host" ]]; then
+    prefix="$1"
+    shift
+  fi
+  local domain="$1" key="$2" type="$3" expected="$4"
+
+  local read_args=()
+  [[ -n "$prefix" ]] && read_args+=("$prefix")
+  read_args+=(read "$domain" "$key")
+
+  local cur normalized_expected="$expected"
+  cur="$(_chris_defaults_read_normalized "${read_args[@]}")"
+
+  # Bool comparison: 1/0 ↔ true/false/YES/NO
+  case "$type" in
+    -bool)
+      case "$expected" in true | TRUE | YES | yes | 1) normalized_expected=1 ;; *) normalized_expected=0 ;; esac
+      case "$cur" in true | TRUE | YES | yes | 1) cur=1 ;; false | FALSE | NO | no | 0) cur=0 ;; esac
+      ;;
+  esac
+
+  if [[ "$cur" == "$normalized_expected" ]]; then
+    return 0
+  fi
+
+  local write_args=()
+  [[ -n "$prefix" ]] && write_args+=("$prefix")
+  write_args+=(write "$domain" "$key")
+  [[ "$type" != "--" ]] && write_args+=("$type")
+  write_args+=("$expected")
+
+  chris_run defaults "${write_args[@]}" || return 0
+  CHRIS_DEVSTRAP_DEFAULTS_CHANGED=1
+  export CHRIS_DEVSTRAP_DEFAULTS_CHANGED
+}
+
+# killall apps only when CHRIS_DEVSTRAP_DEFAULTS_CHANGED=1. Reset after.
+# Usage: chris_killall_if_changed Finder SystemUIServer Dock
+chris_killall_if_changed() {
+  [[ "${CHRIS_DEVSTRAP_DEFAULTS_CHANGED:-0}" == "1" ]] || {
+    step_info "Skipping ${*} restart — no defaults changed in this script."
+    return 0
+  }
+  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+    local app
+    for app in "$@"; do chris_run killall "$app"; done
+  else
+    local app
+    for app in "$@"; do killall "$app" 2>/dev/null || true; done
+  fi
+}
+
+# Set + export CHRIS_DEVSTRAP_INTERACTIVE based on stdout TTY. Honors a pre-set value.
+chris_export_interactive_if_tty() {
+  if [[ -n "${CHRIS_DEVSTRAP_INTERACTIVE:-}" ]]; then
+    export CHRIS_DEVSTRAP_INTERACTIVE
+    return 0
+  fi
+  CHRIS_DEVSTRAP_INTERACTIVE=0
+  [[ -t 1 ]] && CHRIS_DEVSTRAP_INTERACTIVE=1
+  export CHRIS_DEVSTRAP_INTERACTIVE
+}
+
 # Run `brew bundle check --no-upgrade`; install only when something from the file is missing.
 # On a fresh Mac the check fails and install runs; on re-runs satisfied bundles are skipped.
 chris_brew_bundle_if_needed() {

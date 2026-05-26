@@ -46,7 +46,7 @@ fi
 step_start "brew bundle check (--no-upgrade): Brewfile.heavy"
 if brew bundle check --no-upgrade --file="$HEAVY_FILE" --verbose; then
   step_ok "Brewfile.heavy satisfied — skipping heavy downloads"
-  if [[ -d "/Applications/Xcode.app" ]] || xcode-select -p 2>/dev/null | grep -Fq '.app/Contents/Developer'; then
+  if chris_xcode_app_installed; then
     step_info "Xcode present — running first-launch components if still needed…"
     bash "${CHRIS_DEVSTRAP_SCRIPTS_DIR}/xcode-components.sh" || true
   fi
@@ -89,7 +89,7 @@ fi
 
 step_ok "Heavy installs finished."
 
-if [[ -d "/Applications/Xcode.app" ]] || xcode-select -p 2>/dev/null | grep -Fq '.app/Contents/Developer'; then
+if chris_xcode_app_installed; then
   step_info "Xcode present after heavy install — running first-launch components…"
   bash "${CHRIS_DEVSTRAP_SCRIPTS_DIR}/xcode-components.sh" || true
 fi

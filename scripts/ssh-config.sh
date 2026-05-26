@@ -118,6 +118,37 @@ chris_ssh_config_append_github_block() {
   fi
 }
 
+# Run `ssh -T git@<host>` in BatchMode and classify the result. Returns:
+#   0  GitHub authenticated (success line OR exit-1-with-github-message — see GitHub docs)
+#   1  Could not confirm (transport / unknown response)
+#   2  Permission denied
+#   3  ssh exit 255 (host key / connection error)
+# Captures combined output in CHRIS_SSH_VERIFY_OUTPUT for the caller to print.
+chris_github_ssh_verify_batchmode() {
+  local host="${1:-github.com}" out code
+  set +e
+  out="$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T "git@${host}" 2>&1)"
+  code=$?
+  set -e
+  # shellcheck disable=SC2034 # callers read these via the function name (out-params).
+  CHRIS_SSH_VERIFY_OUTPUT="$out"
+  # shellcheck disable=SC2034
+  CHRIS_SSH_VERIFY_CODE="$code"
+  if grep -qi 'Permission denied' <<<"$out"; then
+    return 2
+  fi
+  if [[ "$code" -eq 255 ]]; then
+    return 3
+  fi
+  if grep -Eq 'successfully authenticated|Welcome to GitHub|^Hi ' <<<"$out"; then
+    return 0
+  fi
+  if [[ "$code" -eq 1 ]] && grep -qi 'github\.com' <<<"$out"; then
+    return 0
+  fi
+  return 1
+}
+
 # git@<host>:owner/repo.git — host from dedicated key config or github.com.
 chris_ssh_compute_git_ssh_url() {
   local dedicated_key="$1" default_repo="${2:-jstart/chris-devstrap.git}"

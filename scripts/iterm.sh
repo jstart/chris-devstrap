@@ -59,8 +59,9 @@ PY
     return 0
   fi
   [[ -n "$n" && "$n" =~ ^[0-9]+$ ]] || n=0
-  killall cfprefsd 2>/dev/null || true
   if [[ "$n" -gt 0 ]]; then
+    # A9: only bounce cfprefsd when we actually mutated the plist.
+    killall cfprefsd 2>/dev/null || true
     step_ok "iTerm2: Initial directory → reuse previous session (${n} profile(s) updated)."
   else
     step_ok "iTerm2: Initial directory already set to reuse previous session."
@@ -85,6 +86,13 @@ _open_app() {
   if [[ ! -d "$bundle" ]]; then
     step_warn "${name} not found at ${bundle} — skip open (install via Brewfile if expected)."
     chris_manual_todo "Install ${name} (brew bundle), then: open -a \"${app_name}\""
+    return 0
+  fi
+
+  # A8: skip when the app is already running (avoid focus steal on re-runs).
+  # CHRIS_DEVSTRAP_FORCE_OPEN_APPS=1 to always open (e.g. to pass an additional path).
+  if [[ "${CHRIS_DEVSTRAP_FORCE_OPEN_APPS:-0}" != "1" ]] && pgrep -xq -- "$app_name"; then
+    step_ok "${name} already running — skipping open."
     return 0
   fi
 

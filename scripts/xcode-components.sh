@@ -23,15 +23,6 @@ if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == "1" ]]; then
   exit 0
 fi
 
-_chris_xcode_toolchain_eligible() {
-  if [[ -d "/Applications/Xcode.app" ]]; then
-    return 0
-  fi
-  local p
-  p="$(xcode-select -p 2>/dev/null || true)"
-  [[ -n "$p" && "$p" == *".app/Contents/Developer"* ]]
-}
-
 _chris_configure_xcodebuild() {
   if [[ -d "/Applications/Xcode.app" ]]; then
     export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
@@ -47,7 +38,7 @@ _chris_configure_xcodebuild() {
   return 0
 }
 
-if ! _chris_xcode_toolchain_eligible; then
+if ! chris_xcode_app_installed; then
   step_info "Skipping Xcode components: no /Applications/Xcode.app and active developer dir is not an Xcode.app bundle (Command Line Tools or Xcode not selected)."
   exit 0
 fi
@@ -74,7 +65,14 @@ else
   fi
 fi
 
-if ! "$CHRIS_XCODEBUILD" -downloadPlatform iOS; then
+# A4: skip the (often slow) download when an iOS Simulator runtime is already installed.
+_chris_ios_runtime_installed() {
+  command -v xcrun >/dev/null 2>&1 || return 1
+  xcrun simctl list runtimes 2>/dev/null | grep -Eq '^iOS [0-9]'
+}
+if _chris_ios_runtime_installed; then
+  step_ok "iOS Simulator runtime already installed — skipping -downloadPlatform iOS."
+elif ! "$CHRIS_XCODEBUILD" -downloadPlatform iOS; then
   step_warn "xcodebuild -downloadPlatform iOS failed — install/update the iOS Simulator runtime under Xcode → Settings → Components (or Platforms)."
 fi
 

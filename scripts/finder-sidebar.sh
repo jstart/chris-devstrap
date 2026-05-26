@@ -49,17 +49,39 @@ if ! command -v sbedit &>/dev/null && [[ "${CHRIS_DEVSTRAP_SKIP_SBEDIT_INSTALL:-
   _chris_try_install_sbedit_pkg || true
 fi
 
+# A5: skip sbedit add+reload when Developer + Downloads already pinned.
+_chris_sbedit_already_pinned() {
+  local listing
+  listing="$(sbedit --list 2>/dev/null || true)"
+  [[ -z "$listing" ]] && return 1
+  grep -qF "$HOME/Developer" <<<"$listing" || return 1
+  grep -qF "$HOME/Downloads" <<<"$listing" || return 1
+}
+
+# A5 (mysides variant): mysides list returns "Label -> file:///path".
+_chris_mysides_already_pinned() {
+  local listing
+  listing="$(mysides list 2>/dev/null || true)"
+  [[ -z "$listing" ]] && return 1
+  grep -qF "file://${HOME}/Developer" <<<"$listing" || return 1
+  grep -qF "file://${HOME}/Downloads" <<<"$listing" || return 1
+}
+
 if command -v sbedit &>/dev/null; then
-  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+  if _chris_sbedit_already_pinned; then
+    step_ok "sbedit: Developer + Downloads already in sidebar — skipping --reload --force."
+  elif [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
     chris_run sbedit --add "$HOME/Developer" "$HOME/Downloads"
     chris_run sbedit --reload --force
   else
     sbedit --add "$HOME/Developer" "$HOME/Downloads" 2>/dev/null || true
     sbedit --reload --force 2>/dev/null || sbedit --reload 2>/dev/null || true
+    step_ok "sbedit: added Developer + Downloads (reloaded)."
   fi
-  step_ok "sbedit: added Developer + Downloads (reloaded)."
 elif command -v mysides &>/dev/null; then
-  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+  if _chris_mysides_already_pinned; then
+    step_ok "mysides: Developer + Downloads already in sidebar — skipping add + Finder restart."
+  elif [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
     chris_run mysides add Developer "file://${HOME}/Developer"
     chris_run mysides add Downloads "file://${HOME}/Downloads"
     chris_run killall Finder
@@ -67,8 +89,8 @@ elif command -v mysides &>/dev/null; then
     mysides add Developer "file://${HOME}/Developer" 2>/dev/null || true
     mysides add Downloads "file://${HOME}/Downloads" 2>/dev/null || true
     killall Finder 2>/dev/null || true
+    step_ok "mysides: attempted Developer + Downloads sidebar entries (legacy)."
   fi
-  step_ok "mysides: attempted Developer + Downloads sidebar entries (legacy)."
 else
   step_info "No sbedit or mysides on PATH — Finder sidebar pins are optional (directories still created)."
   chris_manual_todo "Finder sidebar: install sbedit from https://github.com/fabienconus/sidebar-editor/releases (or brew install mysides), then re-run bootstrap — or add ~/Developer and ~/Downloads under Finder → Settings → Sidebar."
