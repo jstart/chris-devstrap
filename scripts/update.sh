@@ -68,6 +68,7 @@ _main() {
     step_start "Refresh: re-run idempotent config scripts (CHRIS_DEVSTRAP_REFRESH=1)"
     local refresh_scripts=(
       git-config.sh
+      gh-extensions.sh
       macos-defaults.sh
       finder-sidebar.sh
       dock.sh

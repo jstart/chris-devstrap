@@ -4,7 +4,7 @@ ZSH_THEME="robbyrussell"
 plugins=(git history-substring-search)
 [[ -r "$ZSH/oh-my-zsh.sh" ]] && source "$ZSH/oh-my-zsh.sh"
 
-# fzf + zsh-autosuggestions (Homebrew; see README)
+# fzf + zsh-autosuggestions + zoxide (Homebrew; see README)
 if [[ -r /opt/homebrew/opt/fzf/shell/completion.zsh ]]; then
   source /opt/homebrew/opt/fzf/shell/completion.zsh
   source /opt/homebrew/opt/fzf/shell/key-bindings.zsh
@@ -16,6 +16,8 @@ for _chris_as in /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
   [[ -r "$_chris_as" ]] && source "$_chris_as" && break
 done
 unset _chris_as
+# zoxide: smart cd by frecency. Use `z <dir-substring>` (cd is left untouched).
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
 
 # --- chris-devstrap: shell aliases (begin) ---
 mkcd() {

@@ -46,7 +46,7 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 
 | Command | What it does |
 |--------|----------------|
-| `./bootstrap.sh` | Full bootstrap: **10** ordered steps (brew → bundle → zsh + git-config → macOS defaults → Xcode components (if full Xcode) → Finder sidebar → Dock → Raycast hotkey prep → SSH/origin when needed → **heavy installs (Xcode via mas + Android Studio; deferred so the long downloads run last and never block earlier setup)**). Idempotent for most steps. Prints **wall time** at the end. |
+| `./bootstrap.sh` | Full bootstrap: **10** ordered steps (brew → bundle → zsh + git-config + gh extensions → macOS defaults → Xcode components (if full Xcode) → Finder sidebar → Dock → Raycast hotkey prep → SSH/origin when needed → **heavy installs (Xcode via mas + Android Studio; deferred so the long downloads run last and never block earlier setup)**). Idempotent for most steps. Prints **wall time** at the end. |
 | `./bootstrap.sh rerun` | Same as no subcommand. |
 | `./bootstrap.sh --dry-run` | Prints planned `defaults` / `dockutil` / etc. via `chris_run`; skips `brew bundle install` and SSH setup. Exits `0` early if brew is still missing (preview only). |
 | `./bootstrap.sh --verbose` | Same as full bootstrap with `set -x` (shell trace) after helpers load. Combine with other flags as needed. |
@@ -107,7 +107,8 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | Homebrew + CLT + `~/.zprofile` shellenv | [`install.sh`](install.sh) gates clone on CLT via [`scripts/clt.sh`](scripts/clt.sh); [`scripts/brew.sh`](scripts/brew.sh) runs CLT then Homebrew |
 | Bundle | `Brewfile` (+ `Brewfile.dev` when present unless `CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1`); for **`mas install`**, sign into the Mac App Store in the UI first (see **Mac App Store** above). |
 | Zsh / Oh My Zsh + snippet | `scripts/zsh.sh`, `templates/zshrc.snippet`, `templates/zsh-aliases.snippet` (git/shell shortcuts appended if missing) |
-| Global Git defaults (no user.name) | `scripts/git-config.sh` |
+| Global Git defaults (no user.name) | `scripts/git-config.sh` — `init.defaultBranch=main`, `fetch.prune`, `pull.rebase=false`, `rerere.enabled`, `merge.conflictStyle=zdiff3`. When `delta` is on `PATH`, also sets `core.pager=delta`, `interactive.diffFilter='delta --color-only'`, `delta.navigate/side-by-side/line-numbers=true` (all via `_git_set_if_missing` — never overwrites user-customized values). |
+| GitHub CLI extensions (`gh dash`) | `scripts/gh-extensions.sh` — installs `dlvhdr/gh-dash` (TUI for PRs/issues/notifications). Override the set with `CHRIS_DEVSTRAP_GH_EXTENSIONS='owner/repo other/ext'` or skip entirely with `CHRIS_DEVSTRAP_SKIP_GH_EXTENSIONS=1`. |
 | Finder (new window **Downloads**, column view, **date-modified** sort defaults + PlistBuddy best effort); Desktop & Dock window prefs; trackpad (**tap to click** + firm press / Force Click off); screenshots; **Control Center → Sound → Always Show** in menu bar (`ByHost` plist `Sound` = `18`); default browser (`defaultbrowser` when installed); hot corners; hide desktop widgets; global **`NSNavLastRootDirectory`** hint for some open/save sheets | `scripts/macos-defaults.sh` (UI sounds **off** by default unless `CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=0`) |
 | Headshot → **`~/Downloads/headshot.png`** + macOS **local user** login picture (`dscl`, needs **`assets/headshot.png`** in the repo) | `scripts/headshot.sh` (see [`assets/README.md`](assets/README.md)) |
 | Xcode first launch + iOS Simulator download | `scripts/xcode-components.sh` when Xcode was present at bootstrap start, or chained after successful `heavy-installs.sh` |

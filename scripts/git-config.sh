@@ -27,6 +27,21 @@ _main() {
   # Integrate remote branches with merge on pull (not rebase) when this key was never set.
   _git_set_if_missing pull.rebase false
   _git_set_if_missing rerere.enabled true
+  # zdiff3 shows the original "ancestor" hunk inside conflict markers (Git 2.35+, pairs well with delta).
+  _git_set_if_missing merge.conflictStyle zdiff3
+
+  # delta (git-delta): syntax-aware pager. Idempotent via _git_set_if_missing — users who
+  # already have core.pager / interactive.diffFilter set keep their existing config.
+  if command -v delta &>/dev/null; then
+    step_info "git-delta detected — wiring core.pager + delta.* (only where unset)"
+    _git_set_if_missing core.pager delta
+    _git_set_if_missing interactive.diffFilter 'delta --color-only'
+    _git_set_if_missing delta.navigate true
+    _git_set_if_missing delta.side-by-side true
+    _git_set_if_missing delta.line-numbers true
+  else
+    step_info "git-delta not on PATH — skipping delta.* git config (install via Brewfile)"
+  fi
 
   chris_manual_todo_block "Git identity:" \
     "  git config --global user.name '…' and user.email '…' when ready (not set by this script)" \

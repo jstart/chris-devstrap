@@ -156,9 +156,10 @@ if [[ -f "$ROOT/Brewfile.heavy" ]] && [[ "${CHRIS_DEVSTRAP_SKIP_HEAVY:-0}" != "1
     "  Open the App Store app and sign in — mas signin is not supported on modern macOS"
 fi
 
-step_progress 3 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Zsh + Oh My Zsh"
+step_progress 3 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Zsh + Oh My Zsh + git defaults + gh extensions"
 bash "$ROOT/scripts/zsh.sh"
 bash "$ROOT/scripts/git-config.sh"
+bash "$ROOT/scripts/gh-extensions.sh"
 
 step_progress 4 "$CHRIS_DEVSTRAP_BOOT_STEPS" "macOS defaults (Finder, trackpad, screenshots, …) + user picture"
 bash "$ROOT/scripts/macos-defaults.sh"

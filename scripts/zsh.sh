@@ -154,10 +154,22 @@ append_shell_extras() {
   if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
     return 0
   fi
+  # Backfill the zoxide line into an older block (added later than fzf/zsh-autosuggestions) without
+  # rewriting the whole block. Idempotent on the inner sentinel.
   if grep -qE 'fzf/shell/key-bindings\.zsh|chris-devstrap: fzf \+ zsh-autosuggestions' "$HOME/.zshrc" 2>/dev/null; then
+    if ! grep -qF 'chris-devstrap: zoxide' "$HOME/.zshrc" 2>/dev/null; then
+      step_start "Append zoxide init to ~/.zshrc (existing fzf block present)"
+      cat >>"$HOME/.zshrc" <<'EOF'
+
+# --- chris-devstrap: zoxide (begin) ---
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
+# --- chris-devstrap: zoxide (end) ---
+EOF
+      step_ok "zoxide init appended"
+    fi
     return 0
   fi
-  step_start "Append fzf + zsh-autosuggestions to ~/.zshrc"
+  step_start "Append fzf + zsh-autosuggestions + zoxide to ~/.zshrc"
   cat >>"$HOME/.zshrc" <<'EOF'
 
 # --- chris-devstrap: fzf + zsh-autosuggestions (begin) ---
@@ -173,6 +185,10 @@ for _chris_as in /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 done
 unset _chris_as
 # --- chris-devstrap: fzf + zsh-autosuggestions (end) ---
+
+# --- chris-devstrap: zoxide (begin) ---
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
+# --- chris-devstrap: zoxide (end) ---
 EOF
   step_ok "Shell extras block appended"
 }
