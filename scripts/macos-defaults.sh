@@ -46,13 +46,43 @@ chris_defaults_write_if_diff NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -b
 chris_defaults_write_if_diff NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
 
 # Finder: new windows open in ~/Downloads; column view is already FXPreferredViewStyle=clmv above.
-# Global NSNavLastRootDirectory is a best-effort hint for some Cocoa save/open panels (not universal).
+# Global NSNavLastRootDirectory seeds Cocoa NSOpenPanel/NSSavePanel when the calling app has
+# no per-app override. We also scrub per-app overrides below so the global hint actually wins.
 # Sort-by-date defaults + PlistBuddy paths vary by macOS; failures are ignored.
 step_start "Finder: new window → Downloads; default sort date modified (best effort)"
 _chris_downloads_uri="$(python3 -c 'import pathlib; print(pathlib.Path.home().joinpath("Downloads").as_uri())')"
 chris_defaults_write_if_diff com.apple.finder NewWindowTarget -string PfLo
 chris_defaults_write_if_diff com.apple.finder NewWindowTargetPath -string "$_chris_downloads_uri"
 chris_defaults_write_if_diff NSGlobalDomain NSNavLastRootDirectory -string "${HOME}/Downloads"
+
+# Cocoa file-chooser default: scrub per-app NSNavLastRootDirectory so apps that have already
+# written their own value (e.g. you saved once to ~/Documents in Preview) fall back to the
+# global ~/Downloads hint on next launch. Opt out with CHRIS_DEVSTRAP_KEEP_APP_NAV_DIRS=1 if
+# you rely on per-app save-panel memory (e.g. Photoshop pinned to ~/Pictures).
+if [[ "${CHRIS_DEVSTRAP_KEEP_APP_NAV_DIRS:-0}" != "1" ]]; then
+  _chris_nav_scrubbed=0
+  # `defaults find` is one syscall pass; iterating every domain takes ~40s on warm machines.
+  # 'Apple Global Domain' is the display name for NSGlobalDomain (already set above) — skip it.
+  while IFS= read -r _chris_dom; do
+    [[ -z "$_chris_dom" ]] && continue
+    [[ "$_chris_dom" == "Apple Global Domain" ]] && continue
+    if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+      chris_run defaults delete "$_chris_dom" NSNavLastRootDirectory
+    else
+      if defaults delete "$_chris_dom" NSNavLastRootDirectory 2>/dev/null; then
+        _chris_nav_scrubbed=$((_chris_nav_scrubbed + 1))
+        CHRIS_DEVSTRAP_DEFAULTS_CHANGED=1
+      fi
+    fi
+  done < <(defaults find NSNavLastRootDirectory 2>/dev/null | awk -F"'" '/^Found .* in domain / { print $2 }' | sort -u)
+  if [[ "$_chris_nav_scrubbed" -gt 0 ]]; then
+    step_ok "Scrubbed per-app NSNavLastRootDirectory from ${_chris_nav_scrubbed} domain(s); next launch → ~/Downloads."
+  else
+    step_ok "No per-app NSNavLastRootDirectory overrides found — global ~/Downloads already authoritative."
+  fi
+else
+  step_info "CHRIS_DEVSTRAP_KEEP_APP_NAV_DIRS=1 — leaving per-app file-chooser defaults intact."
+fi
 chris_defaults_write_if_diff com.apple.finder FXArrangeGroupViewBy -string dateModified
 chris_defaults_write_if_diff com.apple.finder FXPreferredGroupBy -string dateModified
 chris_defaults_write_if_diff com.apple.finder FK_ArrangeBy -string dateModified
