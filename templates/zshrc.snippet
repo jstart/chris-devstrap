@@ -41,5 +41,25 @@ gitclean() {
   git fetch --prune
   git branch -r | awk '{print $1}' | egrep -v -f /dev/fd/0 <(git branch -vv | grep origin) | awk '{print $1}' | xargs git branch -D
 }
+
+# Restart Core Audio. On modern macOS (SIP), `launchctl kickstart` is blocked;
+# killing coreaudiod is the reliable fix — launchd respawns it automatically.
+# Prefer this over `launchctl stop/start`, which often fails silently.
+audio() {
+  echo "Restarting Core Audio…"
+  if sudo killall coreaudiod 2>/dev/null; then
+    sleep 0.5
+    if pgrep -xq coreaudiod; then
+      echo "coreaudiod restarted"
+    else
+      echo "coreaudiod killed; waiting for launchd to respawn…"
+      sleep 1
+    fi
+  else
+    echo "Failed — need sudo, or coreaudiod wasn't running"
+    return 1
+  fi
+}
+alias audiorestart=audio
 # --- chris-devstrap: shell aliases (end) ---
 # chris-devstrap end
