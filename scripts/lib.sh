@@ -400,12 +400,13 @@ chris_print_manual_todos() {
   [[ "$n" -eq 0 ]] && return 0
 
   # Sort by @@PRIO=NNN@@ (stable via original index). Index-only sort file avoids multiline breakage.
+  # Use decimal indices only — zero-padded values like 00008 are invalid octal in bash ${arr[$i]}.
   local i sort_file
   local -a order=()
   sort_file="$(mktemp "${TMPDIR:-/tmp}/chris-devstrap-todos.XXXXXX")"
   for ((i = 0; i < n; i++)); do
     _chris_manual_strip_markers "${items[$i]}"
-    printf '%s\t%05d\n' "$_chris_manual_prio" "$i" >>"$sort_file"
+    printf '%s\t%d\n' "$_chris_manual_prio" "$i" >>"$sort_file"
   done
   while IFS=$'\t' read -r _prio _idx; do
     order+=("$_idx")
@@ -423,7 +424,7 @@ chris_print_manual_todos() {
         fi
         ;;
       open_tcc_av_screen)
-        chris_open_privacy_panes ScreenCapture Microphone Camera
+        chris_open_privacy_panes ScreenCapture Microphone Camera Accessibility
         step_info "Opened Privacy panes — enable the apps listed in this step, then quit/reopen them."
         ;;
     esac

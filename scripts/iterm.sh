@@ -120,10 +120,11 @@ _main() {
 
   # Guided step after Git identity (prio 30): TCC cannot be granted from scripts.
   chris_manual_todo_block_prio 40 ACTION=open_tcc_av_screen \
-    "Privacy — Screen / audio / camera for Chrome, Zoom, Raycast:" \
+    "Privacy — Screen / audio / camera / Accessibility:" \
     "  Screen & System Audio Recording → enable Google Chrome, zoom.us, Raycast" \
     "  Microphone → enable Google Chrome, zoom.us" \
     "  Camera → enable Google Chrome, zoom.us" \
+    "  Accessibility → enable Raycast (Script Commands / UI automation)" \
     "  Quit and reopen each app after toggling (required for Screen Recording)" \
     "  System Settings panes open when this step starts"
 

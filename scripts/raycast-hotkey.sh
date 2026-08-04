@@ -84,12 +84,5 @@ if [[ "${CHRIS_DEVSTRAP_DEFAULTS_CHANGED:-0}" == "1" ]] && [[ "${CHRIS_DEVSTRAP_
   fi
 fi
 
-chris_manual_todo_block "Raycast setup:" \
-  "  General → Hotkey → ⌘Space" \
-  "  AI → off (global switch)" \
-  "  Extensions → disable rows you do not need" \
-  "  Window Management: Left ⌘⌃← / Right ⌘⌃→ / Maximize ⌘⌃Space" \
-  "  Clipboard History ⌘⇧C" \
-  "  System Settings → Privacy & Security → Accessibility (enable Raycast)" \
-  "  Screen Recording for Raycast is covered in the Privacy checklist step" \
-  "  UI sounds: silenced by bootstrap unless CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=0"
+# Raycast prefs + Script Commands live in one guided step (avoids duplicate Accessibility / ⌘⌃Z todos).
+# Queued from scripts/raycast-script-commands.sh (has DEST_DIR).

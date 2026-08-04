@@ -57,10 +57,14 @@ else
   fi
 fi
 
-# Manual one-time setup: Raycast must learn about the folder, and we cannot assign hotkeys
-# from the shell (com.raycast.macos.plist keypaths are undocumented + change between releases).
-chris_manual_todo_block "Raycast Script Commands — one-time setup:" \
-  "  Raycast Settings (⌘,) → Extensions → Script Commands" \
-  "  → '+' → User Folder → choose: ${DEST_DIR}" \
-  "  Then Extensions → search 'Dismiss Mac Notifications' → click the Hotkey field → press ⌘⌃Z" \
-  "  First run: grant Accessibility to Raycast (System Settings → Privacy & Security → Accessibility)"
+# One guided Raycast step (prefs + Script Commands / ⌘⌃Z). Privacy/Accessibility is prio 40.
+chris_manual_todo_block_prio 45 "Raycast setup:" \
+  "  General → Hotkey → ⌘Space" \
+  "  AI → off (global switch)" \
+  "  Extensions → disable rows you do not need" \
+  "  Window Management: Left ⌘⌃← / Right ⌘⌃→ / Maximize ⌘⌃Space" \
+  "  Clipboard History ⌘⇧C" \
+  "  Script Commands: Settings → Extensions → Script Commands → '+' → User Folder → ${DEST_DIR}" \
+  "  Extensions → 'Dismiss Mac Notifications' → Hotkey → ⌘⌃Z" \
+  "  Accessibility + Screen Recording for Raycast are in the Privacy checklist step" \
+  "  UI sounds: silenced by bootstrap unless CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=0"

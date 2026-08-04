@@ -226,20 +226,12 @@ install_dismiss_mac_notifications() {
     cp -f "$src/dismiss-notifications.sh" "$src/dismiss-notifications.jxa" "$dest/"
     chmod +x "$dest/dismiss-notifications.sh"
     step_ok "Scripts installed (JXA UI automation; Accessibility required for the calling app)"
+    # Primary ⌘⌃Z path is Raycast Script Commands (guided checklist). Shortcuts.app is documented
+    # in KEYBOARD_SHORTCUT_SETUP.txt only — avoid a second checklist step for the same hotkey.
     if [[ -f "$src/KEYBOARD_SHORTCUT_SETUP.txt" ]]; then
       cp -f "$src/KEYBOARD_SHORTCUT_SETUP.txt" "$dest/"
     fi
   fi
-  # Recommended hotkey is ⌘⌃Z. Raycast Script Commands path is wired by
-  # scripts/raycast-script-commands.sh; this block covers the Shortcuts.app fallback.
-  chris_manual_todo_block "Dismiss Mac Notifications — bind ⌘⌃Z via Shortcuts.app:" \
-    "  Open Shortcuts.app → File → New Shortcut (⌘N)" \
-    "  Add Action: 'Run Shell Script' (Shell: /bin/bash)" \
-    "  Script body (one line): ${dest}/dismiss-notifications.sh" \
-    "  Rename to 'Dismiss Mac Notifications'" \
-    "  Shortcut Details (ⓘ) → Add Keyboard Shortcut → press ⌘⌃Z" \
-    "  First run: grant Accessibility to Shortcuts (System Settings → Privacy & Security → Accessibility)" \
-    "  Alternate path: Raycast Script Commands — see the 'Raycast Script Commands' block above (⌘⌃Z too)"
 }
 
 append_dismiss_notifications_shell() {
