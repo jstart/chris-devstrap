@@ -195,7 +195,11 @@ if [[ "$CHRIS_DEVSTRAP_DRY_RUN" == 1 ]]; then
   step_info "See README for CHRIS_DEVSTRAP_FORCE_SSH_SETUP."
   chris_manual_todo "Run ./bootstrap.sh without --dry-run for GitHub SSH + origin when you are ready."
 else
-  bash "$ROOT/scripts/git-ssh-setup.sh"
+  # Soft-fail: SSH wizard exit must not skip manual follow-ups / heavy installs.
+  if ! bash "$ROOT/scripts/git-ssh-setup.sh"; then
+    step_warn "GitHub SSH setup exited non-zero — continuing bootstrap."
+    chris_manual_todo "Finish GitHub SSH + origin: run ./scripts/git-ssh-setup.sh"
+  fi
 fi
 
 bash "$ROOT/scripts/iterm.sh"

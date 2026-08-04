@@ -120,14 +120,18 @@ chris_killall_if_changed() {
   fi
 }
 
-# Set + export CHRIS_DEVSTRAP_INTERACTIVE based on stdout TTY. Honors a pre-set value.
+# Set + export CHRIS_DEVSTRAP_INTERACTIVE based on a usable terminal.
+# Honors a pre-set value. curl|bash leaves stdin as the pipe, and bootstrap later
+# tees stdout — so also treat a usable /dev/tty (controlling terminal) as interactive.
 chris_export_interactive_if_tty() {
   if [[ -n "${CHRIS_DEVSTRAP_INTERACTIVE:-}" ]]; then
     export CHRIS_DEVSTRAP_INTERACTIVE
     return 0
   fi
   CHRIS_DEVSTRAP_INTERACTIVE=0
-  [[ -t 1 ]] && CHRIS_DEVSTRAP_INTERACTIVE=1
+  if [[ -t 1 ]] || [[ -t 0 ]] || { [[ -r /dev/tty ]] && [[ -w /dev/tty ]]; }; then
+    CHRIS_DEVSTRAP_INTERACTIVE=1
+  fi
   export CHRIS_DEVSTRAP_INTERACTIVE
 }
 
