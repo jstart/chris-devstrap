@@ -126,7 +126,7 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | GitHub SSH + `origin` | `scripts/git-ssh-setup.sh` (always invoked at end of bootstrap except `--dry-run`; fast-path skips when `origin` + `ssh -T` already pass) — alias-aware via `~/.ssh/config` parsing; coexists with `scripts/github-account-add.sh` demoted blocks. |
 | Add a GitHub SSH identity (primary or alias) | `scripts/github-account-add.sh` (interactive `/dev/tty`; not auto-invoked by `./bootstrap.sh` — run on demand). See **Multiple GitHub accounts** below. |
 | Raycast / Cursor / iTerm + iTerm prefs | `scripts/iterm.sh` — sets iTerm2 **Custom Directory** = **Recycle**; opens apps when present; queues **Natural Text Editing** as guided checklist **step 1** |
-| Heavy installs (Xcode via `mas`, Android Studio) | `scripts/heavy-installs.sh` — last step; checks `Brewfile.heavy` first (skips downloads when satisfied). Apple ID + App Store sign-in is in the guided checklist (queued after brew bundle). Enter to start downloads or `s` to skip; chains `xcode-components.sh` when Xcode installs or is already present. |
+| Heavy installs (Xcode via `mas`, Android Studio) | `scripts/heavy-installs.sh` — last step; checks `Brewfile.heavy` first (skips when satisfied). Installs Xcode and Android Studio **separately** with live `mas`/`brew` progress bars on `/dev/tty` (bootstrap’s log tee would otherwise hide them) plus elapsed-time log lines. Apple ID + App Store sign-in is in the guided checklist. Enter to start or `s` to skip; chains `xcode-components.sh` when Xcode is present. |
 
 
 ## Manual steps
