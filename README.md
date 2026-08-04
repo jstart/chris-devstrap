@@ -171,7 +171,12 @@ The script ssh-adds via `--apple-use-keychain` when available, copies the public
 
 ### Microphone, camera, screen recording
 
-macOS TCC cannot be granted from this repo. Use each app once, then **System Settings → Privacy & Security** to enable Chrome/Safari/Zoom as needed; quit and reopen after toggling Screen Recording.
+macOS TCC cannot be granted from this repo. The guided checklist includes a **Privacy** step (after Git identity) that opens System Settings panes for:
+
+- **Screen & System Audio Recording** — Google Chrome, zoom.us, Raycast
+- **Microphone** / **Camera** — Google Chrome, zoom.us
+
+Quit and reopen each app after toggling Screen Recording.
 
 ## Troubleshooting
 

@@ -118,6 +118,15 @@ _main() {
     "  https://iterm2.com/documentation-preferences-profiles-keys.html" \
     "  Tab keys: add ⌘⌥← → Previous Tab and ⌘⌥→ → Next Tab under Key Mappings (remove conflicts first)"
 
+  # Guided step after Git identity (prio 30): TCC cannot be granted from scripts.
+  chris_manual_todo_block_prio 40 ACTION=open_tcc_av_screen \
+    "Privacy — Screen / audio / camera for Chrome, Zoom, Raycast:" \
+    "  Screen & System Audio Recording → enable Google Chrome, zoom.us, Raycast" \
+    "  Microphone → enable Google Chrome, zoom.us" \
+    "  Camera → enable Google Chrome, zoom.us" \
+    "  Quit and reopen each app after toggling (required for Screen Recording)" \
+    "  System Settings panes open when this step starts"
+
   _open_app "Raycast" "/Applications/Raycast.app"
   _open_app "Cursor" "/Applications/Cursor.app"
   _open_app "iTerm" "/Applications/iTerm.app" "$ROOT"
