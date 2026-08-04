@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Recommended global Git defaults (idempotent). Does not set user.name / user.email.
+# Recommended global Git defaults (idempotent). Always sets user.name (default: Christopher Truman).
+# user.email is collected in the guided checklist via a pre-filled iTerm tab.
 set -euo pipefail
 
 # shellcheck source=lib.sh
@@ -43,9 +44,32 @@ _main() {
     step_info "git-delta not on PATH — skipping delta.* git config (install via Brewfile)"
   fi
 
-  chris_manual_todo_block "Git identity:" \
-    "  git config --global user.name '…' and user.email '…' when ready (not set by this script)" \
-    "  Commit signing (SSH or GPG): https://docs.github.com/en/authentication/managing-commit-signature-verification"
+  # Always set display name (override with CHRIS_DEVSTRAP_GIT_USER_NAME).
+  local desired_name="${CHRIS_DEVSTRAP_GIT_USER_NAME:-Christopher Truman}"
+  local cur_name=""
+  cur_name="$(git config --global --get user.name 2>/dev/null || true)"
+  if [[ "$cur_name" == "$desired_name" ]]; then
+    step_ok "git user.name already '${desired_name}'"
+  else
+    chris_run git config --global user.name "$desired_name"
+    step_ok "git user.name → '${desired_name}'"
+  fi
+
+  # Guided checklist step 3 (prio 30): open iTerm tab with email command ready.
+  # Skip the email prompt when already set unless CHRIS_DEVSTRAP_FORCE_GIT_EMAIL=1.
+  local cur_email=""
+  cur_email="$(git config --global --get user.email 2>/dev/null || true)"
+  if [[ -n "$cur_email" && "${CHRIS_DEVSTRAP_FORCE_GIT_EMAIL:-0}" != "1" ]]; then
+    step_ok "git user.email already set (${cur_email}) — skipping email checklist step"
+  else
+    chris_manual_todo_block_prio 30 ACTION=iterm_git_email \
+      "Git identity — set user.email:" \
+      "  user.name is already '${desired_name}'" \
+      "  A new iTerm tab opens with: git config --global user.email " \
+      "  Type your email, press Enter in that tab, then continue here" \
+      "  Commit signing (SSH or GPG): https://docs.github.com/en/authentication/managing-commit-signature-verification"
+  fi
+
   step_ok "Git global defaults applied (where missing)"
 }
 

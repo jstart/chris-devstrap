@@ -112,8 +112,8 @@ _main() {
     _chris_iterm_set_reuse_previous_directory
   fi
 
-  step_info "iTerm keybinding tips are listed under \"Manual follow-ups\" at the end of this bootstrap run."
-  chris_manual_todo_block "iTerm2 setup:" \
+  step_info "iTerm Natural Text Editing is the first guided manual step at the end of this bootstrap run."
+  chris_manual_todo_block_prio 10 "iTerm2 → Natural Text Editing:" \
     "  Settings (⌘,) → Profiles → [profile] → Keys → Key Bindings → Presets… → Natural Text Editing" \
     "  https://iterm2.com/documentation-preferences-profiles-keys.html" \
     "  Tab keys: add ⌘⌥← → Previous Tab and ⌘⌥→ → Next Tab under Key Mappings (remove conflicts first)"

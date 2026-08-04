@@ -154,7 +154,7 @@ else
 fi
 
 if [[ -f "$ROOT/Brewfile.heavy" ]] && [[ "${CHRIS_DEVSTRAP_SKIP_HEAVY:-0}" != "1" ]]; then
-  chris_manual_todo_block "Apple ID + Mac App Store — required for Xcode via mas:" \
+  chris_manual_todo_block_prio 20 "Apple ID + Mac App Store — required for Xcode via mas:" \
     "  System Settings → Apple Account → Sign In" \
     "  Open the App Store app and sign in — mas signin is not supported on modern macOS"
 fi
