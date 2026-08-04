@@ -155,5 +155,42 @@ elif ! "$CHRIS_XCODEBUILD" -downloadPlatform iOS; then
   step_warn "xcodebuild -downloadPlatform iOS failed — install/update the iOS Simulator runtime under Xcode → Settings → Components (or Platforms)."
 fi
 
+# Dock runs earlier in bootstrap (before heavy mas install). Pin Xcode now when it
+# just appeared — same slot as config/dock-add.tsv (after Cursor, before iTerm).
+_chris_dock_add_xcode() {
+  local app="/Applications/Xcode.app"
+  [[ -d "$app" ]] || return 0
+  if ! command -v dockutil >/dev/null 2>&1; then
+    step_warn "dockutil not on PATH — skip Dock pin for Xcode (re-run ./scripts/dock.sh after brew bundle)."
+    return 0
+  fi
+  if dockutil --find Xcode &>/dev/null; then
+    step_ok "Xcode already on Dock"
+    return 0
+  fi
+  step_start "Add Xcode to Dock"
+  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+    chris_run dockutil --add "$app" --label Xcode --after Cursor --no-restart
+    return 0
+  fi
+  local added=0
+  if dockutil --find Cursor &>/dev/null &&
+    dockutil --add "$app" --label Xcode --after Cursor --no-restart 2>/dev/null; then
+    added=1
+  elif dockutil --find iTerm &>/dev/null &&
+    dockutil --add "$app" --label Xcode --before iTerm --no-restart 2>/dev/null; then
+    added=1
+  elif dockutil --add "$app" --label Xcode --no-restart 2>/dev/null; then
+    added=1
+  fi
+  if [[ "$added" == "1" ]]; then
+    killall Dock 2>/dev/null || true
+    step_ok "Xcode pinned to Dock (matches config/dock-add.tsv order when Cursor/iTerm are present)"
+  else
+    step_warn "Could not add Xcode to Dock — run: dockutil --add /Applications/Xcode.app --label Xcode"
+  fi
+}
+_chris_dock_add_xcode
+
 chris_xcode_manual_todos
 step_ok "Xcode components step finished (warnings above are non-fatal)."

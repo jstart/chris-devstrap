@@ -1,5 +1,7 @@
 # Tab-separated: DockLabel	/App/Path.app  (lines starting with # ignored)
 # Only these apps are added, in order, after dock.sh clears the Dock.
+# Missing .app paths are skipped. Xcode is also pinned from scripts/xcode-components.sh
+# after a late mas install (Dock runs before Brewfile.heavy).
 
 Messages	/System/Applications/Messages.app
 Google Chrome	/Applications/Google Chrome.app
