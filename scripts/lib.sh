@@ -131,11 +131,53 @@ chris_export_interactive_if_tty() {
   export CHRIS_DEVSTRAP_INTERACTIVE
 }
 
+# Raise the soft open-files limit when it is below target.
+# Fresh macOS shells often start at 256; brew bundle / upgrade open many FDs and hit
+# "Too many open files". Best-effort — never fails the caller. Override target with
+# CHRIS_DEVSTRAP_OPEN_FILES_LIMIT (default 10240).
+chris_raise_open_files_limit() {
+  local target="${CHRIS_DEVSTRAP_OPEN_FILES_LIMIT:-10240}"
+  local cur hard
+
+  cur="$(ulimit -n 2>/dev/null || printf '0')"
+  if [[ "$cur" == "unlimited" ]]; then
+    return 0
+  fi
+  if [[ "$cur" =~ ^[0-9]+$ ]] && ((cur >= target)); then
+    return 0
+  fi
+
+  if ulimit -n "$target" 2>/dev/null; then
+    if declare -f step_info &>/dev/null; then
+      step_info "Raised open-files soft limit: ${cur} → $(ulimit -n) (avoids brew 'Too many open files')"
+    fi
+    return 0
+  fi
+
+  hard="$(ulimit -Hn 2>/dev/null || printf '0')"
+  if [[ "$hard" == "unlimited" ]]; then
+    hard="$target"
+  fi
+  if [[ "$hard" =~ ^[0-9]+$ ]] && ((hard > cur)) && ulimit -n "$hard" 2>/dev/null; then
+    if declare -f step_info &>/dev/null; then
+      step_info "Raised open-files soft limit: ${cur} → $(ulimit -n) (hard cap; target was ${target})"
+    fi
+    return 0
+  fi
+
+  if declare -f step_warn &>/dev/null; then
+    step_warn "Could not raise open-files limit (ulimit -n=${cur}); brew may hit 'Too many open files'."
+  fi
+  return 0
+}
+
 # Run `brew bundle check --no-upgrade`; install only when something from the file is missing.
 # On a fresh Mac the check fails and install runs; on re-runs satisfied bundles are skipped.
 chris_brew_bundle_if_needed() {
   local file="$1"
   local label="${2:-$(basename "$file")}"
+
+  chris_raise_open_files_limit
 
   step_start "brew bundle check (--no-upgrade): ${label}"
   if brew bundle check --no-upgrade --file="$file" --verbose; then

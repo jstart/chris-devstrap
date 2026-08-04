@@ -81,6 +81,7 @@ else
   step_info "Non-interactive run — starting heavy downloads. Set CHRIS_DEVSTRAP_SKIP_HEAVY=1 to skip."
 fi
 
+chris_raise_open_files_limit
 if ! brew bundle install --no-upgrade --file="$HEAVY_FILE"; then
   step_warn "brew bundle install for $HEAVY_FILE reported failures (see output above)."
   chris_manual_todo "$(chris_heavy_install_manual_msg "$HEAVY_FILE")"

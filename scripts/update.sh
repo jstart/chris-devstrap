@@ -34,6 +34,8 @@ _main() {
   if [[ "$CHRIS_DEVSTRAP_DRY_RUN" == 1 ]]; then
     step_info "Dry-run: would run brew update, brew upgrade, then bundle check/install."
   else
+    chris_raise_open_files_limit
+
     step_start "brew update"
     brew update
 
