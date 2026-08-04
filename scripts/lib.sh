@@ -225,7 +225,8 @@ chris_run() {
   "$@"
 }
 
-# One line for the end-of-bootstrap checklist (bootstrap sets CHRIS_DEVSTRAP_MANUAL_TODOS_FILE).
+# One line for the guided checklist queue (bootstrap sets CHRIS_DEVSTRAP_MANUAL_TODOS_FILE).
+# Printed in two waves: before heavy installs, then again after heavy for late follow-ups.
 # Optional leading markers on the title line (stripped at display time):
 #   @@PRIO=010@@           sort key (lower = earlier; default 050)
 #   @@ACTION=iterm_git_email@@  run helper when the guided step is shown
@@ -360,13 +361,19 @@ chris_open_privacy_panes() {
 # Shared re-run command for Brewfile.heavy failures / skips.
 chris_heavy_install_manual_msg() {
   local heavy_file="${1:-${CHRIS_DEVSTRAP_ROOT}/Brewfile.heavy}"
-  printf 'Heavy installs deferred. After signing into Apple ID + Mac App Store, run: brew bundle install --no-upgrade --file=%s' "$heavy_file"
+  if chris_xcode_app_installed; then
+    printf 'Heavy installs deferred. Run: brew bundle install --no-upgrade --file=%s' "$heavy_file"
+  else
+    printf 'Heavy installs deferred. After signing into Apple ID + Mac App Store, run: brew bundle install --no-upgrade --file=%s' "$heavy_file"
+  fi
 }
 
 # Print queued manual steps. When interactive (TTY bootstrap, not dry-run), walks the user
 # through each line and waits for Enter on /dev/tty before the next (done or skipped for now).
 # Opt out: CHRIS_DEVSTRAP_SKIP_MANUAL_GUIDE=1 (prints the same list as before, no pauses).
 # Items may carry @@PRIO=NNN@@ (lower first; default 050) and @@ACTION=name@@ markers.
+# Consumes the queue file; bootstrap re-inits it when a second wave of todos is expected
+# (after the pre-heavy checklist, before heavy-installs.sh).
 chris_print_manual_todos() {
   [[ -n "${CHRIS_DEVSTRAP_MANUAL_TODOS_FILE:-}" && -s "$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE" ]] || return 0
 
