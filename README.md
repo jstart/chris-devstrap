@@ -121,12 +121,12 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | `~/Developer` layout + sidebar | `scripts/finder-sidebar.sh` — downloads official **sbedit** `.pkg` when missing (`sudo installer`), then pins **Developer** + **Downloads** |
 | Dock | `scripts/dock.sh` — `defaults` for autohide + **tilesize / largesize 128**; `dockutil --remove all`, `config/dock-remove.txt`, `config/dock-add.tsv`; **`~/Downloads`** fan (**others**, date modified); `killall Dock` |
 | Raycast / Spotlight | `scripts/raycast-hotkey.sh` (disables `AppleSymbolicHotKeys:64` so ⌘Space is free for Raycast) |
-| Raycast Script Commands | `scripts/raycast-script-commands.sh` — installs `templates/raycast-script-commands/*.sh` (currently **Dismiss Mac Notifications**) into `~/Library/Application Support/chris-devstrap/raycast-script-commands/`. One-time setup: Raycast → Settings → Extensions → Script Commands → "+" → User Folder → that path, then assign **⌘⌃Z**. Override with `CHRIS_DEVSTRAP_RAYCAST_SCRIPTS_DIR=…` or skip with `CHRIS_DEVSTRAP_SKIP_RAYCAST_SCRIPTS=1`. |
-| Dismiss-Notifications shortcut (`⌘⌃Z`) | `scripts/zsh.sh` installs `~/bin/DismissMacNotifications/dismiss-notifications.{sh,jxa}` and surfaces a manual TODO at the end of bootstrap with both Raycast (path A, automated) and Shortcuts.app (path B, manual) recipes — see [`templates/dismiss-mac-notifications/KEYBOARD_SHORTCUT_SETUP.txt`](templates/dismiss-mac-notifications/KEYBOARD_SHORTCUT_SETUP.txt) |
+| Raycast + Script Commands | `scripts/raycast-hotkey.sh` + `scripts/raycast-script-commands.sh` — one guided checklist step: ⌘Space prefs, Script Commands folder (`~/Library/Application Support/chris-devstrap/raycast-script-commands/`, currently **Dismiss Mac Notifications**), and **⌘⌃Z**. Override dir with `CHRIS_DEVSTRAP_RAYCAST_SCRIPTS_DIR=…` or skip with `CHRIS_DEVSTRAP_SKIP_RAYCAST_SCRIPTS=1`. |
+| Dismiss-Notifications scripts (`⌘⌃Z`) | `scripts/zsh.sh` installs `~/bin/DismissMacNotifications/dismiss-notifications.{sh,jxa}`. Primary bind is Raycast Script Commands (guided checklist). Shortcuts.app fallback is documented only in [`templates/dismiss-mac-notifications/KEYBOARD_SHORTCUT_SETUP.txt`](templates/dismiss-mac-notifications/KEYBOARD_SHORTCUT_SETUP.txt). |
 | GitHub SSH + `origin` | `scripts/git-ssh-setup.sh` (always invoked at end of bootstrap except `--dry-run`; fast-path skips when `origin` + `ssh -T` already pass) — alias-aware via `~/.ssh/config` parsing; coexists with `scripts/github-account-add.sh` demoted blocks. |
 | Add a GitHub SSH identity (primary or alias) | `scripts/github-account-add.sh` (interactive `/dev/tty`; not auto-invoked by `./bootstrap.sh` — run on demand). See **Multiple GitHub accounts** below. |
 | Raycast / Cursor / iTerm + iTerm prefs | `scripts/iterm.sh` — sets iTerm2 **Custom Directory** = **Recycle**; opens apps when present; queues **Natural Text Editing** as guided checklist **step 1** |
-| Heavy installs (Xcode via `mas`, Android Studio) | `scripts/heavy-installs.sh` — last step; checks `Brewfile.heavy` first (skips downloads when satisfied). Apple ID + App Store sign-in is in the guided checklist (queued after brew bundle). Enter to start downloads or `s` to skip; chains `xcode-components.sh` when Xcode installs or is already present. |
+| Heavy installs (Xcode via `mas`, Android Studio) | `scripts/heavy-installs.sh` — last step; checks `Brewfile.heavy` first (skips downloads when satisfied). Apple ID + App Store sign-in is queued in the guided checklist only when Xcode is not already installed. Enter to start downloads or `s` to skip; chains `xcode-components.sh` when Xcode installs or is already present. |
 
 
 ## Manual steps
@@ -175,6 +175,7 @@ macOS TCC cannot be granted from this repo. The guided checklist includes a **Pr
 
 - **Screen & System Audio Recording** — Google Chrome, zoom.us, Raycast
 - **Microphone** / **Camera** — Google Chrome, zoom.us
+- **Accessibility** — Raycast (Script Commands / UI automation)
 
 Quit and reopen each app after toggling Screen Recording.
 
