@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Best-effort: Xcode first-launch packages + iOS Simulator runtime (full Xcode only).
+# Best-effort: Xcode license, first-launch packages + iOS Simulator runtime (full Xcode only).
 # See README: "Xcode iOS SDK and predictive completion". CLT-only machines are skipped.
 set -euo pipefail
 
@@ -7,8 +7,12 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 chris_xcode_manual_todos() {
+  local license_line="  License: accepted automatically when sudo is available (else: sudo xcodebuild -license accept)"
+  if [[ "${CHRIS_XCODE_LICENSE_OK:-0}" != "1" ]]; then
+    license_line="  sudo xcodebuild -license accept   # required — git/clang will refuse until this runs"
+  fi
   chris_manual_todo_block "Xcode (after install):" \
-    "  sudo xcodebuild -license accept when prompted" \
+    "$license_line" \
     "  Settings → Text Editing → download predictive completion when offered" \
     "  Settings → Components → iOS Simulator runtime if CLI download failed"
 }
@@ -38,6 +42,76 @@ _chris_configure_xcodebuild() {
   return 0
 }
 
+# Point active developer dir at full Xcode when present (avoids CLT-only path after mas install).
+_chris_xcode_select_app() {
+  [[ -d "/Applications/Xcode.app/Contents/Developer" ]] || return 0
+  local cur
+  cur="$(xcode-select -p 2>/dev/null || true)"
+  if [[ "$cur" == "/Applications/Xcode.app/Contents/Developer" ]]; then
+    step_ok "xcode-select already points at Xcode.app"
+    return 0
+  fi
+  step_start "xcode-select -s Xcode.app"
+  if sudo -n xcode-select -s /Applications/Xcode.app/Contents/Developer 2>/dev/null; then
+    step_ok "Active developer directory → /Applications/Xcode.app/Contents/Developer"
+    return 0
+  fi
+  if [[ -r /dev/tty && -w /dev/tty ]] && sudo xcode-select -s /Applications/Xcode.app/Contents/Developer </dev/tty 2>/dev/tty; then
+    step_ok "Active developer directory → /Applications/Xcode.app/Contents/Developer"
+    return 0
+  fi
+  step_warn "Could not switch xcode-select to Xcode.app — run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
+  return 1
+}
+
+# Accept the Xcode/SDK license non-interactively. Without this, new shells print:
+#   You have not agreed to the Xcode license agreements...
+_chris_xcode_accept_license() {
+  CHRIS_XCODE_LICENSE_OK=0
+  step_start "Xcode license (sudo xcodebuild -license accept)"
+
+  # Already accepted? xcodebuild -license check / -checkFirstLaunchStatus varies by version;
+  # probe with a cheap license-gated command.
+  if "$CHRIS_XCODEBUILD" -version >/dev/null 2>&1; then
+    step_ok "Xcode license already accepted (xcodebuild -version ok)"
+    CHRIS_XCODE_LICENSE_OK=1
+    return 0
+  fi
+
+  local out=""
+  if sudo -n "$CHRIS_XCODEBUILD" -license accept >/dev/null 2>&1; then
+    :
+  elif [[ -r /dev/tty && -w /dev/tty ]]; then
+    step_info "Accepting Xcode license (uses primed sudo / may prompt once)…"
+    if ! sudo "$CHRIS_XCODEBUILD" -license accept </dev/tty 2>/dev/tty; then
+      step_warn "sudo xcodebuild -license accept failed."
+      chris_manual_todo "Run: sudo xcodebuild -license accept"
+      return 1
+    fi
+  else
+    step_warn "Cannot accept Xcode license — no sudo ticket and no /dev/tty."
+    chris_manual_todo "Run: sudo xcodebuild -license accept"
+    return 1
+  fi
+
+  if "$CHRIS_XCODEBUILD" -version >/dev/null 2>&1; then
+    step_ok "Xcode license accepted"
+    CHRIS_XCODE_LICENSE_OK=1
+    return 0
+  fi
+
+  # Some installs still need -runFirstLaunch before -version is clean; treat accept as done.
+  out="$("$CHRIS_XCODEBUILD" -version 2>&1 || true)"
+  if [[ "$out" == *"license"* ]]; then
+    step_warn "License still blocking after accept: ${out}"
+    chris_manual_todo "Run: sudo xcodebuild -license accept"
+    return 1
+  fi
+  step_ok "Xcode license accept command finished"
+  CHRIS_XCODE_LICENSE_OK=1
+  return 0
+}
+
 if ! chris_xcode_app_installed; then
   step_info "Skipping Xcode components: no /Applications/Xcode.app and active developer dir is not an Xcode.app bundle (Command Line Tools or Xcode not selected)."
   exit 0
@@ -47,9 +121,14 @@ if ! _chris_configure_xcodebuild; then
   exit 0
 fi
 
-step_start "Xcode components (first launch + iOS Simulator runtime)"
+step_start "Xcode components (license + first launch + iOS Simulator runtime)"
 step_info "Using DEVELOPER_DIR=${DEVELOPER_DIR}"
 step_info "Reference: https://developer.apple.com/documentation/xcode/downloading-and-installing-additional-xcode-components"
+
+_chris_xcode_select_app || true
+# Re-resolve paths after xcode-select may have changed.
+_chris_configure_xcodebuild || exit 0
+_chris_xcode_accept_license || true
 
 # Exits non-zero when first-launch work is still needed — not treated as a bootstrap failure.
 if "$CHRIS_XCODEBUILD" -checkFirstLaunchStatus; then
