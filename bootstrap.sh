@@ -126,6 +126,11 @@ step_info "Log file: $LOG_FILE"
 step_info "dry_run=${CHRIS_DEVSTRAP_DRY_RUN}"
 hr
 
+# Prime sudo before Homebrew: the official installer runs NONINTERACTIVE=1 (sudo -n)
+# and will not ask for a password. curl|bash also leaves stdin as a pipe, so priming
+# must use /dev/tty (see scripts/sudo-keepalive.sh).
+chris_devstrap_sudo_prime_and_keepalive
+
 step_progress 1 "$CHRIS_DEVSTRAP_BOOT_STEPS" "Command Line Tools + Homebrew (shellenv)"
 bash "$ROOT/scripts/brew.sh"
 
@@ -139,8 +144,6 @@ if ! chris_eval_brew_shellenv; then
   step_warn "Homebrew not found after brew.sh; aborting."
   exit 1
 fi
-
-chris_devstrap_sudo_prime_and_keepalive
 
 step_progress 2 "$CHRIS_DEVSTRAP_BOOT_STEPS" "brew bundle (check + install)"
 chris_brew_bundle_if_needed "$ROOT/Brewfile" "Brewfile"
@@ -192,7 +195,11 @@ if [[ "$CHRIS_DEVSTRAP_DRY_RUN" == 1 ]]; then
   step_info "See README for CHRIS_DEVSTRAP_FORCE_SSH_SETUP."
   chris_manual_todo "Run ./bootstrap.sh without --dry-run for GitHub SSH + origin when you are ready."
 else
-  bash "$ROOT/scripts/git-ssh-setup.sh"
+  # Soft-fail: SSH wizard exit must not skip manual follow-ups / heavy installs.
+  if ! bash "$ROOT/scripts/git-ssh-setup.sh"; then
+    step_warn "GitHub SSH setup exited non-zero — continuing bootstrap."
+    chris_manual_todo "Finish GitHub SSH + origin: run ./scripts/git-ssh-setup.sh"
+  fi
 fi
 
 bash "$ROOT/scripts/iterm.sh"

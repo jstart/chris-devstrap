@@ -12,12 +12,16 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ssh-config.sh"
 
 GIT_SSH_URL="$(chris_ssh_compute_git_ssh_url "$DEDICATED_KEY")"
 
-# Full TTY, or stdin TTY + bootstrap saved interactive (stdout may be piped to tee from bootstrap).
+# Full TTY, bootstrap-saved interactive with stdin TTY, or controlling terminal
+# (/dev/tty) — curl|bash leaves stdin as the pipe/EOF even in Terminal.app.
 _interactive_context_ok() {
   if [[ -t 0 && -t 1 ]]; then
     return 0
   fi
   if [[ -t 0 && "${CHRIS_DEVSTRAP_INTERACTIVE:-0}" == "1" ]]; then
+    return 0
+  fi
+  if [[ -r /dev/tty && -w /dev/tty ]]; then
     return 0
   fi
   return 1
@@ -28,11 +32,31 @@ _git_origin_url_ok() {
   [[ -n "$cur" && "$cur" == "$want" ]]
 }
 
+# Read a line from the controlling terminal (not stdin — curl|bash stdin is the pipe).
+_read_tty() {
+  local prompt="${1:-}"
+  if [[ -r /dev/tty && -w /dev/tty ]]; then
+    [[ -n "$prompt" ]] && printf '%s' "$prompt" >/dev/tty
+    IFS= read -r _REPLY </dev/tty || return 1
+    return 0
+  fi
+  if [[ -t 0 ]]; then
+    [[ -n "$prompt" ]] && printf '%s' "$prompt"
+    IFS= read -r _REPLY || return 1
+    return 0
+  fi
+  return 1
+}
+
 _die_no_tty() {
-  step_warn "GitHub SSH setup requires an interactive terminal (stdin/stdout must be a TTY, or run from ./bootstrap.sh in a normal Terminal session)."
-  step_info "This check avoids unattended runs hanging on prompts or failing silently."
-  step_info "For CI or automation, set CHRIS_DEVSTRAP_SKIP_SSH=1 to skip this step (documented escape hatch)."
-  exit 1
+  step_warn "GitHub SSH setup needs a terminal for the key-add prompt (stdin was not a TTY and /dev/tty was unavailable)."
+  step_info "Re-run from Terminal: ./scripts/git-ssh-setup.sh"
+  step_info "For CI or automation, set CHRIS_DEVSTRAP_SKIP_SSH=1 to skip this step."
+  if declare -f chris_manual_todo &>/dev/null; then
+    chris_manual_todo "Finish GitHub SSH + origin: run ./scripts/git-ssh-setup.sh from an interactive Terminal."
+  fi
+  # Soft-fail so bootstrap can still print manual follow-ups and run heavy installs.
+  exit 0
 }
 
 _ensure_github_ssh_config() {
@@ -243,7 +267,10 @@ EOF
   fi
 
   hr
-  read -r -p "Press Enter after you have added this key to your GitHub account… " _
+  if ! _read_tty "Press Enter after you have added this key to your GitHub account… "; then
+    step_warn "Could not read from the terminal — re-run ./scripts/git-ssh-setup.sh after adding the key."
+    exit 1
+  fi
 
   if ! _verify_github_ssh; then
     step_warn "Fix SSH keys or ssh-agent, then re-run: ./scripts/git-ssh-setup.sh"

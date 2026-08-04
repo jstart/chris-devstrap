@@ -74,9 +74,24 @@ if command -v sbedit &>/dev/null; then
     chris_run sbedit --add "$HOME/Developer" "$HOME/Downloads"
     chris_run sbedit --reload --force
   else
-    sbedit --add "$HOME/Developer" "$HOME/Downloads" 2>/dev/null || true
-    sbedit --reload --force 2>/dev/null || sbedit --reload 2>/dev/null || true
-    step_ok "sbedit: added Developer + Downloads (reloaded)."
+    # Capture stderr: TCC / Full Disk Access failures still print "Services reloaded"
+    # and we must not claim success when the SFL file was not writable.
+    _chris_sbedit_out=""
+    _chris_sbedit_out="$(sbedit --add "$HOME/Developer" "$HOME/Downloads" 2>&1 || true)"
+    _chris_sbedit_out+=$'\n'"$(sbedit --reload --force 2>&1 || sbedit --reload 2>&1 || true)"
+    if printf '%s\n' "$_chris_sbedit_out" | grep -qiE 'permission|Operation not permitted|unable to read the SFL|NSCocoaErrorDomain'; then
+      step_warn "sbedit could not update Finder sidebar (needs Full Disk Access for your terminal)."
+      printf '%s\n' "$_chris_sbedit_out" | sed '/^$/d; s/^/  /' >&2
+      chris_manual_todo_block "Finder sidebar — grant Full Disk Access, then re-run sidebar script:" \
+        "  System Settings → Privacy & Security → Full Disk Access → enable Terminal (or iTerm)" \
+        "  Then: ./scripts/finder-sidebar.sh" \
+        "  Or add ~/Developer + ~/Downloads under Finder → Settings → Sidebar"
+    elif _chris_sbedit_already_pinned; then
+      step_ok "sbedit: added Developer + Downloads (reloaded)."
+    else
+      step_warn "sbedit ran but Developer/Downloads not confirmed in sidebar."
+      chris_manual_todo "Finder sidebar: grant Full Disk Access to your terminal, run ./scripts/finder-sidebar.sh — or pin ~/Developer + ~/Downloads in Finder → Settings → Sidebar."
+    fi
   fi
 elif command -v mysides &>/dev/null; then
   if _chris_mysides_already_pinned; then
