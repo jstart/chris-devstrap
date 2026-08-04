@@ -340,6 +340,23 @@ end tell
 EOF
 }
 
+# Best-effort open System Settings → Privacy & Security panes (ScreenCapture, Microphone, Camera, …).
+chris_open_privacy_panes() {
+  local pane
+  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+    for pane in "$@"; do
+      chris_run : "open Privacy_${pane} System Settings pane"
+    done
+    return 0
+  fi
+  for pane in "$@"; do
+    # Legacy PrefPane hash + Ventura+ Settings extension IDs (ignore failures).
+    open "x-apple.systempreferences:com.apple.preference.security?Privacy_${pane}" >/dev/null 2>&1 || true
+    open "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_${pane}" >/dev/null 2>&1 || true
+    sleep 0.4
+  done
+}
+
 # Shared re-run command for Brewfile.heavy failures / skips.
 chris_heavy_install_manual_msg() {
   local heavy_file="${1:-${CHRIS_DEVSTRAP_ROOT}/Brewfile.heavy}"
@@ -404,6 +421,10 @@ chris_print_manual_todos() {
         else
           step_warn "Could not open iTerm tab — run: git config --global user.email 'you@example.com'"
         fi
+        ;;
+      open_tcc_av_screen)
+        chris_open_privacy_panes ScreenCapture Microphone Camera
+        step_info "Opened Privacy panes — enable the apps listed in this step, then quit/reopen them."
         ;;
     esac
   }

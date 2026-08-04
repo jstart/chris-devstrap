@@ -90,5 +90,6 @@ chris_manual_todo_block "Raycast setup:" \
   "  Extensions → disable rows you do not need" \
   "  Window Management: Left ⌘⌃← / Right ⌘⌃→ / Maximize ⌘⌃Space" \
   "  Clipboard History ⌘⇧C" \
-  "  System Settings → Privacy & Security → Accessibility (+ Screen Recording if asked)" \
+  "  System Settings → Privacy & Security → Accessibility (enable Raycast)" \
+  "  Screen Recording for Raycast is covered in the Privacy checklist step" \
   "  UI sounds: silenced by bootstrap unless CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS=0"
