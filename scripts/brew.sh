@@ -15,6 +15,20 @@ if ! chris_brew_prefix_path &>/dev/null; then
   if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
     step_info "Would install Homebrew (NONINTERACTIVE=1 official install.sh)."
   else
+    # Official installer uses sudo -n under NONINTERACTIVE=1 — needs a live ticket.
+    # Bootstrap primes earlier; this covers standalone `./scripts/brew.sh` and curl|bash
+    # where stdin is not a TTY (must use /dev/tty for the password prompt).
+    if ! sudo -nv 2>/dev/null; then
+      if [[ ! -r /dev/tty || ! -w /dev/tty ]]; then
+        step_warn "Homebrew install needs sudo, but /dev/tty is unavailable. Re-run from Terminal."
+        exit 1
+      fi
+      step_info "sudo: enter your password for Homebrew install…"
+      if ! sudo -v </dev/tty 2>/dev/tty; then
+        step_warn "sudo -v failed — cannot install Homebrew."
+        exit 1
+      fi
+    fi
     NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
 fi

@@ -39,7 +39,7 @@ gh repo create jstart/chris-devstrap --public \
 
 If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin main`** instead. Then confirm Actions: **https://github.com/jstart/chris-devstrap/actions**.
 
-**Do not run the whole repo as root.** `defaults`, Dock, `~/.zprofile`, `~/.ssh`, and `git config --global` are per-user. After `brew.sh` puts Homebrew on `PATH`, bootstrap runs `sudo -v` once and keeps the ticket alive in the background so a long `brew bundle` (or other steps that need `sudo`) does not hit an expired credential mid-run. Set `CHRIS_DEVSTRAP_SKIP_SUDO_PRIME=1` to skip that.
+**Do not run the whole repo as root.** `defaults`, Dock, `~/.zprofile`, `~/.ssh`, and `git config --global` are per-user. Before Homebrew install, bootstrap runs `sudo -v` once (via `/dev/tty`, so `curl | bash` still gets a password prompt) and keeps the ticket alive in the background — the official Homebrew installer is `NONINTERACTIVE` (`sudo -n`) and will not ask for a password itself. Set `CHRIS_DEVSTRAP_SKIP_SUDO_PRIME=1` to skip that.
 
 ## Commands
 
@@ -66,7 +66,7 @@ If **`origin`** already exists (empty repo on GitHub), use **`git push -u origin
 | `CHRIS_DEVSTRAP_INTERACTIVE` | Set by bootstrap/update when stdout is a TTY (colors + `git-ssh-setup` TTY rules with `tee`). |
 | `CHRIS_DEVSTRAP_SKIP_DEV_BUNDLE=1` | Skip `Brewfile.dev` for this run (otherwise installed when that file exists). |
 | `CHRIS_DEVSTRAP_CLEANUP=1` | With `./bootstrap.sh update`, run `brew cleanup` after bundle. |
-| `CHRIS_DEVSTRAP_SKIP_SUDO_PRIME=1` | Skip sudo prime/keepalive before bundle/defaults. |
+| `CHRIS_DEVSTRAP_SKIP_SUDO_PRIME=1` | Skip sudo prime/keepalive before Homebrew / bundle / defaults. |
 | `CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS` | **Default on:** unset or non-`0` disables **all** macOS UI sound effects during `macos-defaults.sh` (same scope as **System Settings → Sound → Sound Effects**; includes screenshot shutter). Set to **`0`** to leave UI sounds enabled. Apple has no screenshot-only toggle. |
 | `CHRIS_DEVSTRAP_SKIP_SBEDIT_INSTALL=1` | Skip downloading/installing the **sbedit** `.pkg` in `finder-sidebar.sh` (sidebar CLI has no Homebrew formula). |
 | `CHRIS_DEVSTRAP_SBEDIT_PKG_URL` | Override URL for the **sbedit** installer pkg (default: sidebar-editor **1.0** release asset on GitHub). |
