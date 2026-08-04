@@ -226,12 +226,52 @@ chris_run() {
 }
 
 # One line for the end-of-bootstrap checklist (bootstrap sets CHRIS_DEVSTRAP_MANUAL_TODOS_FILE).
+# Optional leading markers on the title line (stripped at display time):
+#   @@PRIO=010@@           sort key (lower = earlier; default 050)
+#   @@ACTION=iterm_git_email@@  run helper when the guided step is shown
+_chris_manual_strip_markers() {
+  # $1 = title line (or full item). Sets _chris_manual_prio, _chris_manual_action, _chris_manual_text.
+  local head rest=""
+  head="${1%%$'\n'*}"
+  if [[ "$1" == *$'\n'* ]]; then
+    rest="${1#*$'\n'}"
+  fi
+  _chris_manual_prio="050"
+  _chris_manual_action=""
+  if [[ "$head" == @@PRIO=* ]]; then
+    _chris_manual_prio="${head#@@PRIO=}"
+    _chris_manual_prio="${_chris_manual_prio%%@@*}"
+    head="${head#@@PRIO=${_chris_manual_prio}@@}"
+  fi
+  if [[ "$head" == @@ACTION=* ]]; then
+    _chris_manual_action="${head#@@ACTION=}"
+    _chris_manual_action="${_chris_manual_action%%@@*}"
+    head="${head#@@ACTION=${_chris_manual_action}@@}"
+  fi
+  if [[ -n "$rest" ]]; then
+    _chris_manual_text="$head"$'\n'"$rest"
+  else
+    _chris_manual_text="$head"
+  fi
+}
+
 chris_manual_todo() {
   local msg="$*"
   [[ -z "$msg" ]] && return 0
   [[ -z "${CHRIS_DEVSTRAP_MANUAL_TODOS_FILE:-}" ]] && return 0
   if [[ -f "$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE" ]] && grep -qFx "$msg" "$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE" 2>/dev/null; then
     return 0
+  fi
+  # Dedupe on display text (ignore PRIO/ACTION markers on title lines).
+  local bare existing
+  _chris_manual_strip_markers "$msg"
+  bare="$_chris_manual_text"
+  if [[ -f "$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE" ]]; then
+    while IFS= read -r existing || [[ -n "${existing:-}" ]]; do
+      [[ "$existing" =~ ^[[:space:]] ]] && continue
+      _chris_manual_strip_markers "$existing"
+      [[ "$_chris_manual_text" == "$bare" ]] && return 0
+    done <"$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE"
   fi
   printf '%s\n' "$msg" >>"$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE"
 }
@@ -247,6 +287,59 @@ chris_manual_todo_block() {
   done
 }
 
+# Like chris_manual_todo_block, but with a sort priority (lower runs earlier in the guide).
+# Usage: chris_manual_todo_block_prio 10 "Title:" "  detail" ...
+# Optional ACTION= name as 2nd arg:
+#   chris_manual_todo_block_prio 30 ACTION=iterm_git_email "Title:" "  detail"
+chris_manual_todo_block_prio() {
+  [[ $# -lt 2 ]] && return 0
+  local prio="$1"
+  shift
+  local action=""
+  if [[ "${1:-}" == ACTION=* ]]; then
+    action="${1#ACTION=}"
+    shift
+  fi
+  [[ $# -lt 1 ]] && return 0
+  local title="$1"
+  shift
+  local prefix
+  prefix="$(printf '@@PRIO=%03d@@' "$prio")"
+  [[ -n "$action" ]] && prefix="${prefix}@@ACTION=${action}@@"
+  chris_manual_todo "${prefix}${title}"
+  local line
+  for line in "$@"; do
+    chris_manual_todo "$line"
+  done
+}
+
+# Open a new iTerm2 tab and type text without a trailing newline (user finishes + Enter).
+chris_iterm_new_tab_type() {
+  local text="$1"
+  [[ -d "/Applications/iTerm.app" ]] || return 1
+  if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+    chris_run : "iTerm new tab type: ${text}"
+    return 0
+  fi
+  local esc="$text"
+  esc="${esc//\\/\\\\}"
+  esc="${esc//\"/\\\"}"
+  osascript <<EOF >/dev/null 2>&1 || return 1
+tell application "iTerm"
+  activate
+  if (count of windows) = 0 then
+    create window with default profile
+  end if
+  tell current window
+    create tab with default profile
+    tell current session
+      write text "${esc}" without newline
+    end tell
+  end tell
+end tell
+EOF
+}
+
 # Shared re-run command for Brewfile.heavy failures / skips.
 chris_heavy_install_manual_msg() {
   local heavy_file="${1:-${CHRIS_DEVSTRAP_ROOT}/Brewfile.heavy}"
@@ -256,6 +349,7 @@ chris_heavy_install_manual_msg() {
 # Print queued manual steps. When interactive (TTY bootstrap, not dry-run), walks the user
 # through each line and waits for Enter on /dev/tty before the next (done or skipped for now).
 # Opt out: CHRIS_DEVSTRAP_SKIP_MANUAL_GUIDE=1 (prints the same list as before, no pauses).
+# Items may carry @@PRIO=NNN@@ (lower first; default 050) and @@ACTION=name@@ markers.
 chris_print_manual_todos() {
   [[ -n "${CHRIS_DEVSTRAP_MANUAL_TODOS_FILE:-}" && -s "$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE" ]] || return 0
 
@@ -288,12 +382,38 @@ chris_print_manual_todos() {
   local n="${#items[@]}"
   [[ "$n" -eq 0 ]] && return 0
 
+  # Sort by @@PRIO=NNN@@ (stable via original index). Index-only sort file avoids multiline breakage.
+  local i sort_file
+  local -a order=()
+  sort_file="$(mktemp "${TMPDIR:-/tmp}/chris-devstrap-todos.XXXXXX")"
+  for ((i = 0; i < n; i++)); do
+    _chris_manual_strip_markers "${items[$i]}"
+    printf '%s\t%05d\n' "$_chris_manual_prio" "$i" >>"$sort_file"
+  done
+  while IFS=$'\t' read -r _prio _idx; do
+    order+=("$_idx")
+  done < <(LC_ALL=C sort -t $'\t' -k1,1 -k2,2n "$sort_file")
+  rm -f "$sort_file"
+
+  _chris_manual_run_action() {
+    case "$1" in
+      iterm_git_email)
+        if chris_iterm_new_tab_type "git config --global user.email "; then
+          step_info "Opened a new iTerm tab with: git config --global user.email "
+          step_info "Type your email, press Enter in that tab, then continue here."
+        else
+          step_warn "Could not open iTerm tab — run: git config --global user.email 'you@example.com'"
+        fi
+        ;;
+    esac
+  }
+
   if [[ "$use_guide" != 1 ]]; then
     hr
     step_start "Manual follow-ups (todo)"
-    local line
-    for line in "${items[@]}"; do
-      step_info "Next: $line"
+    for i in "${order[@]}"; do
+      _chris_manual_strip_markers "${items[$i]}"
+      step_info "Next: ${_chris_manual_text}"
     done
     return 0
   fi
@@ -301,11 +421,14 @@ chris_print_manual_todos() {
   hr
   step_start "Manual follow-ups — guided checklist (${n} step(s))"
   step_info "Press Enter after each step when you are done, or to skip it for now."
-  local i
-  for ((i = 0; i < n; i++)); do
+  local step_num=0
+  for i in "${order[@]}"; do
+    step_num=$((step_num + 1))
     hr
-    printf '%sStep %s of %s%s\n' "$UI_CYAN" "$((i + 1))" "$n" "$UI_RESET"
-    printf '%s\n\n' "${items[$i]}"
+    printf '%sStep %s of %s%s\n' "$UI_CYAN" "$step_num" "$n" "$UI_RESET"
+    _chris_manual_strip_markers "${items[$i]}"
+    printf '%s\n\n' "$_chris_manual_text"
+    [[ -n "$_chris_manual_action" ]] && _chris_manual_run_action "$_chris_manual_action"
     printf '%sPress Enter to continue…%s\n' "$UI_DIM" "$UI_RESET"
     read -r _ </dev/tty || true
   done
