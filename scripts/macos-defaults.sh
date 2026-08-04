@@ -89,13 +89,30 @@ chris_defaults_write_if_diff com.apple.finder FK_ArrangeBy -string dateModified
 _finder_plist="${HOME}/Library/Preferences/com.apple.finder.plist"
 if [[ -f "$_finder_plist" ]]; then
   # PlistBuddy: check current value first; only write when missing or different.
+  # Missing parent keys are common on fresh Macs — Add quietly, never spam "Does Not Exist".
   _chris_pb_set_if_diff() {
     local path="$1" expected="$2"
     local cur
     cur="$(/usr/libexec/PlistBuddy -c "Print :$path" "$_finder_plist" 2>/dev/null || echo "__MISSING__")"
     [[ "$cur" == "$expected" ]] && return 0
-    chris_run /usr/libexec/PlistBuddy -c "Set :$path $expected" "$_finder_plist" || return 0
-    CHRIS_DEVSTRAP_DEFAULTS_CHANGED=1
+    if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
+      if [[ "$cur" == "__MISSING__" ]]; then
+        chris_run /usr/libexec/PlistBuddy -c "Add :$path string $expected" "$_finder_plist"
+      else
+        chris_run /usr/libexec/PlistBuddy -c "Set :$path $expected" "$_finder_plist"
+      fi
+      return 0
+    fi
+    if [[ "$cur" == "__MISSING__" ]]; then
+      if /usr/libexec/PlistBuddy -c "Add :$path string $expected" "$_finder_plist" 2>/dev/null; then
+        CHRIS_DEVSTRAP_DEFAULTS_CHANGED=1
+      fi
+      # Parent dict missing → Add fails silently; defaults write above still covers most UI.
+      return 0
+    fi
+    if /usr/libexec/PlistBuddy -c "Set :$path $expected" "$_finder_plist" 2>/dev/null; then
+      CHRIS_DEVSTRAP_DEFAULTS_CHANGED=1
+    fi
   }
   for _chris_pb_path in \
     'StandardViewSettings:ExtendedListViewSettingsV2:sortColumn' \
