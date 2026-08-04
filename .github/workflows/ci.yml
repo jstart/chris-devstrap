@@ -46,6 +46,26 @@ jobs:
             /bin/bash -n "$f"
           done
           echo "OK: /bin/bash 3.2 syntax check passed"
+      - name: Regression — remote clt.sh load under bash 3.2 (curl|bash path)
+        run: |
+          set -euo pipefail
+          # Stock macOS /bin/bash is 3.2: `source <(...)` is a known no-op. install.sh
+          # must load scripts/clt.sh via a real file (mktemp), not process substitution.
+          if /bin/bash -c 'source <(printf "%s\n" "chris_clt_probe(){ :; }"); declare -F chris_clt_probe' 2>/dev/null; then
+            echo "NOTE: this bash defines functions via source <(...) (unusual for stock 3.2)"
+          else
+            echo "OK: confirmed source <(...) does not define functions on this bash"
+          fi
+          _f="$(mktemp "${TMPDIR:-/tmp}/chris-devstrap-clt-ci.XXXXXX")"
+          cp scripts/clt.sh "$_f"
+          /bin/bash -c '
+            set -euo pipefail
+            source "$1"
+            declare -F chris_clt_require >/dev/null
+            declare -F chris_clt_require_git >/dev/null
+            echo "OK: temp-file source defines chris_clt_require under /bin/bash"
+          ' bash "$_f"
+          rm -f "$_f"
       - name: bootstrap.sh --dry-run smoke (E1)
         env:
           # Keep CI runs hermetic: don't poll for CLT, don't try to install heavy bundles,

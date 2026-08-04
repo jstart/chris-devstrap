@@ -32,18 +32,28 @@ export CHRIS_DEVSTRAP_WAIT_CLT
 export CHRIS_DEVSTRAP_CLT_CONTEXT=install
 export CHRIS_DEVSTRAP_REPO_SLUG="$REPO_SLUG"
 
+# Load scripts/clt.sh into this shell. macOS /bin/bash is 3.2 — `source <(...)`
+# process substitution is a known no-op there, so remote loads use a temp file.
+_chris_clt_try_source() {
+  local path="$1"
+  [[ -f "$path" ]] || return 1
+  # shellcheck disable=SC1090
+  source "$path"
+  declare -F chris_clt_require >/dev/null 2>&1
+}
+
 _clt_loaded=0
-if [[ -n "$INSTALL_SH_DIR" && -f "${INSTALL_SH_DIR}/scripts/clt.sh" ]]; then
-  # shellcheck source=scripts/clt.sh
-  source "${INSTALL_SH_DIR}/scripts/clt.sh"
+if [[ -n "$INSTALL_SH_DIR" ]] && _chris_clt_try_source "${INSTALL_SH_DIR}/scripts/clt.sh"; then
   _clt_loaded=1
 else
   _clt_url="https://raw.githubusercontent.com/${REPO_SLUG}/main/scripts/clt.sh"
-  if _clt_tmp="$(curl -fsSL "$_clt_url" 2>/dev/null)" && [[ -n "$_clt_tmp" ]]; then
-    # shellcheck disable=SC1090
-    source <(printf '%s\n' "$_clt_tmp")
+  _clt_tmpfile="$(mktemp "${TMPDIR:-/tmp}/chris-devstrap-clt.XXXXXX")"
+  if curl -fsSL "$_clt_url" -o "$_clt_tmpfile" 2>/dev/null &&
+    [[ -s "$_clt_tmpfile" ]] &&
+    _chris_clt_try_source "$_clt_tmpfile"; then
     _clt_loaded=1
   fi
+  rm -f "$_clt_tmpfile"
 fi
 
 if [[ "$_clt_loaded" != "1" ]]; then
