@@ -171,79 +171,8 @@ if [[ "${CHRIS_DEVSTRAP_SILENCE_UI_SOUNDS:-1}" != "0" ]]; then
   chris_defaults_write_if_diff NSGlobalDomain com.apple.sound.uiaudio.enabled -int 0
 fi
 
-# Messages + Reminders: mute per-app notification / message sounds (default on).
-# Opt out: CHRIS_DEVSTRAP_KEEP_APP_NOTIFICATION_SOUNDS=1
-if [[ "${CHRIS_DEVSTRAP_KEEP_APP_NOTIFICATION_SOUNDS:-0}" != "1" ]]; then
-  step_start "Messages + Reminders notification sounds (off)"
-
-  # Messages → Settings → General → Play sound effects
-  chris_defaults_write_if_diff com.apple.MobileSMS PlaySoundsKey -bool false
-  step_info "Messages PlaySoundsKey=false (quit Messages to pick up if it was open)."
-
-  # System Settings → Notifications → <app> → Play sound for notifications
-  # lives in com.apple.ncprefs.plist as flags bit (1<<2)=4.
-  _chris_ncprefs_plist="${HOME}/Library/Preferences/com.apple.ncprefs.plist"
-  _chris_ncprefs_sound_changed=0
-
-  _chris_ncprefs_clear_sound() {
-    local bundle_id="$1" label="$2"
-    local count index bid flags new_flags found=0
-
-    if [[ ! -f "$_chris_ncprefs_plist" ]]; then
-      step_info "${label}: ncprefs missing — app has not registered with Notification Center yet."
-      chris_manual_todo "System Settings → Notifications → ${label} → turn off Play sound for notifications"
-      return 0
-    fi
-
-    if [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" == 1 ]]; then
-      chris_run : "clear ncprefs sound bit (1<<2) for ${bundle_id} (${label})"
-      return 0
-    fi
-
-    count="$(/usr/libexec/PlistBuddy -c 'Print :apps' "$_chris_ncprefs_plist" 2>/dev/null | grep -c 'bundle-id' || true)"
-    [[ "$count" =~ ^[0-9]+$ ]] || count=0
-
-    for ((index = 0; index < count; index++)); do
-      bid="$(/usr/libexec/PlistBuddy -c "Print :apps:${index}:bundle-id" "$_chris_ncprefs_plist" 2>/dev/null || true)"
-      [[ "$bid" == "$bundle_id" ]] || continue
-      found=1
-      flags="$(/usr/libexec/PlistBuddy -c "Print :apps:${index}:flags" "$_chris_ncprefs_plist" 2>/dev/null || echo "")"
-      if ! [[ "$flags" =~ ^[0-9]+$ ]]; then
-        step_warn "${label}: unexpected ncprefs flags '${flags}' — skip automated mute."
-        chris_manual_todo "System Settings → Notifications → ${label} → turn off Play sound for notifications"
-        break
-      fi
-      new_flags=$((flags & ~4))
-      if [[ "$new_flags" -eq "$flags" ]]; then
-        step_ok "${label}: Play sound for notifications already off"
-      else
-        /usr/libexec/PlistBuddy -c "Set :apps:${index}:flags ${new_flags}" "$_chris_ncprefs_plist" 2>/dev/null || {
-          step_warn "${label}: could not write ncprefs flags — set Play sound off in System Settings → Notifications."
-          chris_manual_todo "System Settings → Notifications → ${label} → turn off Play sound for notifications"
-          break
-        }
-        _chris_ncprefs_sound_changed=1
-        CHRIS_DEVSTRAP_DEFAULTS_CHANGED=1
-        step_ok "${label}: Play sound for notifications off (ncprefs ${flags} → ${new_flags})"
-      fi
-      break
-    done
-
-    if [[ "$found" -eq 0 ]]; then
-      step_info "${label}: not in ncprefs yet (open the app or Notifications settings once)."
-      chris_manual_todo "System Settings → Notifications → ${label} → turn off Play sound for notifications (then re-run macos-defaults if you want it automated)"
-    fi
-  }
-
-  _chris_ncprefs_clear_sound "com.apple.MobileSMS" "Messages"
-  _chris_ncprefs_clear_sound "com.apple.reminders" "Reminders"
-
-  if [[ "$_chris_ncprefs_sound_changed" == "1" ]] && [[ "${CHRIS_DEVSTRAP_DRY_RUN:-}" != 1 ]]; then
-    # usernoted reloads ncprefs; macOS relaunches it automatically.
-    killall usernoted 2>/dev/null || true
-    killall NotificationCenter 2>/dev/null || true
-  fi
-fi
+# Pre-accept Notification Center for standard apps; mute Messages/Reminders sounds.
+bash "${CHRIS_DEVSTRAP_SCRIPTS_DIR}/notifications-preaccept.sh"
 
 step_start "Spotlight menu bar icon"
 chris_defaults_write_if_diff -currentHost com.apple.Spotlight MenuItemHidden -int 1
