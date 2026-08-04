@@ -1,7 +1,8 @@
 # Manual follow-ups (personal overrides)
 
 Copy items you care about into your own notes, or append lines via `chris_manual_todo` in a local fork.
-The guided bootstrap checklist already covers iTerm, Raycast, Git identity, Apple ID + App Store, and Xcode.
+The guided checklist covers iTerm, Git identity, Privacy (TCC), and Raycast; Apple ID + App Store
+only when Xcode still needs installing; Xcode follow-ups may appear in a second pass after heavy installs.
 
 ## Google Chrome — profile example
 

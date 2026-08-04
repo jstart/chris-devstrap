@@ -209,10 +209,17 @@ if [[ ! -f "${HOME}/.ssh/id_ed25519" ]] && [[ ! -f "${HOME}/.ssh/id_ed25519.pub"
   chris_manual_todo "Primary GitHub account: run ./scripts/github-account-add.sh for ~/.ssh/id_ed25519 as your default git@github.com identity."
 fi
 
+# Guided checklist before heavy downloads (Apple ID / Privacy / Raycast while you still
+# have attention). Re-init the queue so heavy-installs + chained xcode-components can
+# append follow-ups that would otherwise be orphaned after chris_print_manual_todos.
 chris_print_manual_todos
+: >"$CHRIS_DEVSTRAP_MANUAL_TODOS_FILE"
 
 step_progress "$CHRIS_DEVSTRAP_BOOT_STEPS" "$CHRIS_DEVSTRAP_BOOT_STEPS" "Heavy installs (Xcode via mas, Android Studio) — runs last so long downloads do not block earlier setup"
 bash "$ROOT/scripts/heavy-installs.sh"
+
+# Late follow-ups from heavy skips/failures and post-mas xcode-components (license tips, etc.).
+chris_print_manual_todos
 
 hr
 banner "Bootstrap complete"

@@ -1,9 +1,10 @@
 Dismiss Mac Notifications — bind ⌘⌃Z (Command + Control + Z)
 =============================================================
 
-Recommended hotkey: ⌘⌃Z. chris-devstrap surfaces this same checklist as a
-manual TODO at the end of every ./bootstrap.sh run; this file is the offline
-copy installed at ~/bin/DismissMacNotifications/KEYBOARD_SHORTCUT_SETUP.txt.
+Recommended hotkey: ⌘⌃Z. Bootstrap guides the **Raycast Script Commands** path
+(in the Raycast checklist step). This file is the offline copy installed at
+~/bin/DismissMacNotifications/KEYBOARD_SHORTCUT_SETUP.txt — including the
+Shortcuts.app fallback (not shown in the guided checklist).
 
 Two paths — pick one (or both):
 

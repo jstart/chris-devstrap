@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Best-effort: Xcode license, first-launch packages + iOS Simulator runtime (full Xcode only).
-# See README: "Xcode iOS SDK and predictive completion". CLT-only machines are skipped.
+# See README "What runs where" (Xcode license + first launch). CLT-only machines are skipped.
 set -euo pipefail
 
 # shellcheck source=lib.sh
